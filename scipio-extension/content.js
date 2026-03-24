@@ -469,19 +469,48 @@
       }
     }
 
-    // 6. Brute-force fallback for missed input fields
-    for (const inp of document.querySelectorAll('input')) {
-      if (inp.value) continue;
-      if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'submit' ||
-          inp.type === 'checkbox' || inp.type === 'radio' || inp.type === 'button') continue;
+    // 6. Brute-force fallback for ALL empty visible fields (input, textarea, contenteditable)
+    for (const inp of document.querySelectorAll('input, textarea, [contenteditable="true"]')) {
+      // Skip filled or irrelevant
+      const isContentEditable = inp.getAttribute('contenteditable') === 'true';
+      const currentVal = isContentEditable ? inp.textContent.trim() : inp.value;
+      if (currentVal) continue;
+      if (!isContentEditable) {
+        if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'submit' ||
+            inp.type === 'checkbox' || inp.type === 'radio' || inp.type === 'button') continue;
+      }
       try { if (inp.offsetParent === null) continue; } catch(e) {}
 
+      // Get label + surrounding text
       const label = getFieldLabel(inp);
+      let surroundingText = '';
+      try {
+        let el = inp.previousElementSibling;
+        for (let i = 0; i < 3 && el; i++) { surroundingText += ' ' + el.textContent; el = el.previousElementSibling; }
+        if (inp.parentElement) surroundingText += ' ' + inp.parentElement.textContent;
+      } catch(e) {}
+
       const allAttrs = [label, inp.name, inp.id, inp.placeholder,
         inp.getAttribute('aria-label'), inp.getAttribute('autocomplete'),
-        inp.getAttribute('data-automation-id')].filter(Boolean);
+        surroundingText].filter(Boolean);
       const allText = allAttrs.map(s => s.toLowerCase()).join(' ');
 
+      log('FALLBACK checking:', inp.tagName, 'label:', (label||'').slice(0,40), 'surrounding:', surroundingText.slice(0,60));
+
+      // N/A fields: "if yes", "if no", "facility", "dates worked", "reply with n/a"
+      if (allText.includes('if yes') || allText.includes('if no') || allText.includes('n/a') ||
+          allText.includes('facility') || allText.includes('dates worked') || allText.includes('reply with')) {
+        if (isContentEditable) {
+          inp.textContent = 'N/A';
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+          setNativeValue(inp, 'N/A');
+        }
+        filled.push('N/A field (fallback)');
+        continue;
+      }
+
+      // Address
       if ((allText.includes('address') || allText.includes('street')) &&
           !allText.includes('email') && !allText.includes('ip-')) {
         setNativeValue(inp, profile.address || '1174 Summit Ave');
@@ -489,6 +518,7 @@
         continue;
       }
 
+      // Standard field matching
       for (const attr of allAttrs) {
         const value = matchField(attr, profile);
         if (value) { setNativeValue(inp, value); filled.push(attr + ' (fallback)'); break; }
