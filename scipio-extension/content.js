@@ -417,7 +417,6 @@
     });
 
     for (const [name, radios] of Object.entries(radioGroups)) {
-      // Find the question label for this radio group
       const firstRadio = radios[0];
       const container = firstRadio.closest('fieldset, .field, .question, [class*="question"], [class*="field"]');
       let questionLabel = '';
@@ -427,8 +426,38 @@
       }
       if (!questionLabel) questionLabel = name;
 
+      // Work auth / sponsorship
       if (handleYesNoQuestion(questionLabel, radios)) {
         filled.push(`radio: ${questionLabel.slice(0, 40)}`);
+        continue;
+      }
+
+      // EEO: gender, race, veteran, disability - select "decline" / "do not want to answer"
+      const ql = questionLabel.toLowerCase();
+      if (ql.includes('gender') || ql.includes('race') || ql.includes('ethnicity') ||
+          ql.includes('veteran') || ql.includes('disability') || ql.includes('eeo') ||
+          ql.includes('self identify') || ql.includes('self-identify')) {
+        const decline = radios.find(r => {
+          const rLabel = (getFieldLabel(r) || '').toLowerCase();
+          return rLabel.includes('choose not') || rLabel.includes('do not want') ||
+                 rLabel.includes('decline') || rLabel.includes('prefer not') ||
+                 rLabel.includes('not to self') || rLabel.includes('i do not');
+        });
+        if (decline) {
+          decline.click();
+          filled.push(`eeo: ${questionLabel.slice(0, 40)}`);
+          continue;
+        }
+      }
+    }
+
+    // 3b. Click any standalone "I choose not to self identify" / "I do not want to answer" radio/label
+    for (const radio of document.querySelectorAll('input[type="radio"]:not(:checked)')) {
+      const rLabel = (getFieldLabel(radio) || '').toLowerCase();
+      if (rLabel.includes('choose not to self') || rLabel.includes('do not want to answer') ||
+          rLabel.includes('i do not have a disability')) {
+        radio.click();
+        filled.push('eeo: ' + rLabel.slice(0, 40));
       }
     }
 
@@ -564,12 +593,7 @@
   }
 
   function clickNextOrSubmit() {
-    // Try these selectors in order
-    const selectors = [
-      'button:not([disabled])',
-      'input[type="submit"]:not([disabled])',
-      'a[role="button"]',
-    ];
+    const selectors = ['button:not([disabled])', 'input[type="submit"]:not([disabled])', 'a[role="button"]', 'a.btn', 'a.button'];
     const keywords = ['next', 'submit', 'continue', 'apply', 'send', 'complete', 'finish', 'save'];
 
     for (const selector of selectors) {
@@ -580,25 +604,22 @@
             log('CLICKING:', el.tagName, text);
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => el.click(), 300);
-            return true;
+            return { clicked: true, buttonText: text };
           }
         }
       }
     }
-
-    // Fallback: find any visible button/link with these texts
-    for (const kw of keywords) {
-      const el = document.querySelector(
-        `button:has-text("${kw}"), a:has-text("${kw}"), input[value*="${kw}" i]`
-      );
-      if (el) { el.click(); return true; }
-    }
-
     log('No Next/Submit button found');
-    return false;
+    return { clicked: false, buttonText: '' };
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action === 'clickNext') {
+      const result = clickNextOrSubmit();
+      sendResponse(result);
+      return true;
+    }
+
     if (msg.action === 'fill') {
       chrome.storage.local.get(["profile", "resume_data"], (data) => {
         if (data.profile) {

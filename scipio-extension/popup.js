@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Action buttons
   document.getElementById('fillBtn').addEventListener('click', () => fillForm(false));
-  document.getElementById('fillNextBtn').addEventListener('click', () => fillForm(true));
+  document.getElementById('fillSubmitBtn').addEventListener('click', () => fillForm(true));
+  document.getElementById('nextBtn').addEventListener('click', () => justClickNext());
   document.getElementById('trackBtn').addEventListener('click', addToTracker);
   document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
@@ -150,6 +151,24 @@ async function fillForm(clickNext) {
   } catch (e) {
     btn.disabled = false;
     btn.textContent = 'Auto-Fill Application';
+    showResult(resultEl, 'error', e.message);
+  }
+}
+
+// ===== JUST CLICK NEXT =====
+async function justClickNext() {
+  const resultEl = document.getElementById('result');
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    chrome.tabs.sendMessage(tab.id, { action: 'clickNext' }, (response) => {
+      if (chrome.runtime.lastError || !response) {
+        showResult(resultEl, 'error', 'Could not connect. Refresh page.');
+        return;
+      }
+      showResult(resultEl, response.clicked ? 'success' : 'info',
+        response.clicked ? 'Clicked: ' + response.buttonText : 'No Next/Submit button found');
+    });
+  } catch(e) {
     showResult(resultEl, 'error', e.message);
   }
 }
