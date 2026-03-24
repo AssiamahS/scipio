@@ -487,6 +487,37 @@
       else if (rLabel.includes('not a protected veteran') || rLabel.includes('i am not a protected')) { radio.click(); filled.push('veteran: No'); }
     }
 
+    // 3c. Handle date fields
+    for (const inp of document.querySelectorAll('input[type="date"], input[placeholder*="m/d"], input[placeholder*="mm/dd"], input[placeholder*="date"]')) {
+      if (inp.value) continue;
+      const today = new Date();
+      const m = today.getMonth() + 1;
+      const d = today.getDate();
+      const yy = String(today.getFullYear()).slice(-2);
+      const yyyy = today.getFullYear();
+      // Try ISO format first (for type="date"), then m/d/yy
+      if (inp.type === 'date') {
+        setNativeValue(inp, `${yyyy}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+      } else {
+        setNativeValue(inp, `${m}/${d}/${yy}`);
+      }
+      filled.push('date: today');
+    }
+
+    // Also find date inputs by label
+    for (const inp of document.querySelectorAll('input')) {
+      if (inp.value || inp.type === 'hidden' || inp.type === 'file' || inp.type === 'radio' || inp.type === 'checkbox') continue;
+      const label = (getFieldLabel(inp) || '').toLowerCase();
+      if (label.includes('date') && !label.includes('update') && !label.includes('posted')) {
+        const today = new Date();
+        const m = today.getMonth() + 1;
+        const d = today.getDate();
+        const yy = String(today.getFullYear()).slice(-2);
+        setNativeValue(inp, `${m}/${d}/${yy}`);
+        filled.push('date: ' + label.slice(0, 30));
+      }
+    }
+
     // 4. Handle select dropdowns
     document.querySelectorAll('select:not([readonly])').forEach(select => {
       if (select.value && select.selectedIndex > 0) return;
