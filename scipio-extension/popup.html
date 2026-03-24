@@ -26,9 +26,6 @@ h1 span{color:#38bdf8}
 .result.success{background:#1a3a2a;color:#4ade80;border:1px solid #2d5a3d}
 .result.error{background:#3b2020;color:#f87171;border:1px solid #5a2d2d}
 .result.info{background:#1e3a5f;color:#38bdf8;border:1px solid #2d4a6f}
-.status{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
-.status-ready{background:#1a3a2a;color:#4ade80}
-.status-setup{background:#3b3520;color:#fbbf24}
 .filled-list{font-size:11px;color:#64748b;margin-top:6px;max-height:100px;overflow-y:auto}
 .filled-list div{padding:2px 0;border-bottom:1px solid #1e293b}
 .setup-form label{display:block;font-size:11px;color:#64748b;margin:6px 0 2px}
@@ -47,9 +44,9 @@ h1 span{color:#38bdf8}
 <div class="subtitle">Auto-Apply Engine</div>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('apply')">Apply</div>
-  <div class="tab" onclick="switchTab('profile')">Profile</div>
-  <div class="tab" onclick="switchTab('settings')">Settings</div>
+  <div class="tab active" data-tab="apply">Apply</div>
+  <div class="tab" data-tab="profile">Profile</div>
+  <div class="tab" data-tab="settings">Settings</div>
 </div>
 
 <!-- APPLY TAB -->
@@ -62,8 +59,8 @@ h1 span{color:#38bdf8}
     </div>
   </div>
 
-  <button class="btn btn-fill" id="fillBtn" onclick="fillForm()">Auto-Fill Application</button>
-  <button class="btn btn-track" onclick="addToTracker()">+ Add to Tracker</button>
+  <button class="btn btn-fill" id="fillBtn">Auto-Fill Application</button>
+  <button class="btn btn-track" id="trackBtn">+ Add to Tracker</button>
 
   <div class="result" id="result"></div>
 </div>
@@ -88,7 +85,7 @@ h1 span{color:#38bdf8}
       <label>Years Experience</label><input id="pYears" placeholder="7">
     </div>
   </div>
-  <button class="btn btn-fill" onclick="saveProfile()">Save Profile</button>
+  <button class="btn btn-fill" id="saveProfileBtn">Save Profile</button>
   <div class="result" id="profileResult"></div>
 </div>
 
@@ -102,9 +99,11 @@ h1 span{color:#38bdf8}
       <input id="sDashUrl" placeholder="https://assiamahs.github.io/scipio/">
     </div>
   </div>
-  <button class="btn btn-fill" onclick="saveSettings()">Save Settings</button>
-  <a class="tracker-link" id="dashLink" href="#" target="_blank">Open Dashboard</a>
+  <button class="btn btn-fill" id="saveSettingsBtn">Save Settings</button>
+  <a class="tracker-link" id="dashLink" href="https://assiamahs.github.io/scipio/" target="_blank">Open Dashboard</a>
 </div>
+
+<div class="result" id="globalResult"></div>
 
 <script src="popup.js"></script>
 </body>

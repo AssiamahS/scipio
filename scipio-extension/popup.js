@@ -1,4 +1,4 @@
-// Scipio Extension Popup Logic
+// Scipio Extension Popup - No inline handlers (MV3 CSP compliant)
 
 const DEFAULT_PROFILE = {
   first_name: 'Sylvester',
@@ -25,57 +25,69 @@ const DEFAULT_SETTINGS = {
   dash_url: 'https://assiamahs.github.io/scipio/',
 };
 
-// Tab switching
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', t.textContent.toLowerCase().includes(name));
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  // Tab buttons
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
-  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-  document.getElementById(`tab-${name}`).classList.add('active');
-}
 
-// Detect page on load
-document.addEventListener('DOMContentLoaded', async () => {
-  // Load profile
+  // Action buttons
+  document.getElementById('fillBtn').addEventListener('click', fillForm);
+  document.getElementById('trackBtn').addEventListener('click', addToTracker);
+  document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
+  document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+  // Load saved data
   chrome.storage.local.get(['profile', 'settings'], (data) => {
     const profile = data.profile || DEFAULT_PROFILE;
-    // Save default if not exists
-    if (!data.profile) {
-      chrome.storage.local.set({ profile: DEFAULT_PROFILE });
-    }
+    if (!data.profile) chrome.storage.local.set({ profile: DEFAULT_PROFILE });
     fillProfileForm(profile);
 
     const settings = data.settings || DEFAULT_SETTINGS;
-    if (!data.settings) {
-      chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
-    }
+    if (!data.settings) chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
     fillSettingsForm(settings);
   });
 
   // Detect current page
+  detectPage();
+});
+
+// ===== TABS =====
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  const target = document.getElementById('tab-' + name);
+  if (target) target.classList.add('active');
+}
+
+// ===== PAGE DETECTION =====
+async function detectPage() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-      chrome.tabs.sendMessage(tab.id, { action: 'detect' }, (response) => {
-        if (chrome.runtime.lastError || !response) {
-          document.getElementById('pageTitle').textContent = tab.title || 'Unknown page';
-          document.getElementById('pageAts').textContent = 'N/A';
-          document.getElementById('pageForms').textContent = '(extension not active on this page)';
-          document.getElementById('fillBtn').disabled = true;
-          return;
-        }
-        document.getElementById('pageTitle').textContent = (response.title || '').slice(0, 50);
-        document.getElementById('pageAts').textContent = response.ats;
-        document.getElementById('pageForms').textContent = `| ${response.formCount} forms, ${response.inputCount} inputs`;
-        document.getElementById('fillBtn').disabled = false;
-      });
-    }
+    if (!tab) return;
+
+    chrome.tabs.sendMessage(tab.id, { action: 'detect' }, (response) => {
+      if (chrome.runtime.lastError || !response) {
+        document.getElementById('pageTitle').textContent = (tab.title || 'Unknown').slice(0, 50);
+        document.getElementById('pageAts').textContent = 'N/A';
+        document.getElementById('pageForms').textContent = '(refresh page to activate)';
+        document.getElementById('fillBtn').disabled = true;
+        return;
+      }
+      document.getElementById('pageTitle').textContent = (response.title || '').slice(0, 50);
+      document.getElementById('pageAts').textContent = response.ats;
+      document.getElementById('pageForms').textContent = `| ${response.formCount} forms, ${response.inputCount} inputs`;
+      document.getElementById('fillBtn').disabled = false;
+    });
   } catch (e) {
     console.error('Detection error:', e);
   }
-});
+}
 
-// Fill application form
+// ===== AUTO-FILL =====
 async function fillForm() {
   const btn = document.getElementById('fillBtn');
   const resultEl = document.getElementById('result');
@@ -89,7 +101,7 @@ async function fillForm() {
       btn.textContent = 'Auto-Fill Application';
 
       if (chrome.runtime.lastError || !response) {
-        showResult(resultEl, 'error', 'Could not connect to page. Refresh and try again.');
+        showResult(resultEl, 'error', 'Could not connect to page. Refresh the page and try again.');
         return;
       }
 
@@ -102,12 +114,17 @@ async function fillForm() {
       const missed = response.missed || [];
 
       if (filled.length === 0 && missed.length === 0) {
-        showResult(resultEl, 'info', `ATS: ${response.ats} | No fillable fields found. You may need to click "Apply" first to open the form.`);
+        showResult(resultEl, 'info',
+          `ATS: ${response.ats} | No fillable empty fields found. ` +
+          `Try clicking "Apply" on the page first to open the application form, then try again.`
+        );
       } else {
         let html = `Filled ${filled.length} field(s) on ${response.ats}`;
         if (missed.length) html += ` | Missed: ${missed.join(', ')}`;
         if (filled.length) {
-          html += '<div class="filled-list">' + filled.map(f => `<div>${f}</div>`).join('') + '</div>';
+          html += '<div class="filled-list">' +
+            filled.map(f => '<div>' + escHtml(f) + '</div>').join('') +
+            '</div>';
         }
         showResult(resultEl, filled.length > 0 ? 'success' : 'info', html);
       }
@@ -119,58 +136,49 @@ async function fillForm() {
   }
 }
 
-// Add current page to tracker
+// ===== ADD TO TRACKER =====
 async function addToTracker() {
   const resultEl = document.getElementById('result');
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const url = tab.url || '';
+    const title = tab.title || '';
 
-    chrome.tabs.sendMessage(tab.id, { action: 'getPageInfo' }, async (response) => {
-      const title = response?.title || tab.title || '';
-      const url = response?.url || tab.url || '';
+    // Parse company and role from title
+    let company = '';
+    let role = '';
 
-      // Try to extract company and role from title
-      let company = '';
-      let role = '';
+    if (title.includes(' at ')) {
+      [role, company] = title.split(' at ').map(s => s.trim());
+    } else if (title.includes(' - ')) {
+      const parts = title.split(' - ').map(s => s.trim());
+      role = parts[0]; company = parts[1] || '';
+    } else if (title.includes(' | ')) {
+      const parts = title.split(' | ').map(s => s.trim());
+      role = parts[0]; company = parts[1] || '';
+    } else {
+      role = title.slice(0, 60);
+    }
 
-      // Common patterns: "Role at Company" or "Company - Role" or "Role | Company"
-      if (title.includes(' at ')) {
-        [role, company] = title.split(' at ').map(s => s.trim());
-      } else if (title.includes(' - ')) {
-        const parts = title.split(' - ').map(s => s.trim());
-        if (parts.length >= 2) {
-          role = parts[0];
-          company = parts[1];
-        }
-      } else if (title.includes(' | ')) {
-        const parts = title.split(' | ').map(s => s.trim());
-        if (parts.length >= 2) {
-          role = parts[0];
-          company = parts[1];
+    company = company.replace(/\s*[-|]\s*(Careers|Jobs|Hiring|Greenhouse|Lever).*$/i, '').trim();
+    role = role.replace(/^(Job Application for|Apply for|Nyu Langone Health)\s*/i, '').trim();
+
+    if (!company && title.toLowerCase().includes('nyu langone')) company = 'NYU Langone Health';
+
+    chrome.storage.local.get('settings', async (data) => {
+      const settings = data.settings || {};
+      if (settings.gh_token) {
+        showResult(resultEl, 'info', 'Syncing to tracker...');
+        const success = await addJobToGitHub(settings.gh_token, company, role, url);
+        if (success) {
+          showResult(resultEl, 'success', `Added: ${company || 'Job'} - ${role || 'Role'}`);
+        } else {
+          showResult(resultEl, 'error', 'GitHub sync failed. Check token in Settings tab.');
         }
       } else {
-        role = title.slice(0, 60);
+        showResult(resultEl, 'error', 'No GitHub token. Go to Settings tab and add your token first.');
       }
-
-      // Clean up common suffixes
-      company = company.replace(/\s*[-|]\s*(Careers|Jobs|Hiring|Greenhouse|Lever).*$/i, '').trim();
-      role = role.replace(/^(Job Application for|Apply for)\s*/i, '').trim();
-
-      // Save to GitHub
-      chrome.storage.local.get('settings', async (data) => {
-        const settings = data.settings || {};
-        if (settings.gh_token) {
-          const success = await addJobToGitHub(settings.gh_token, company, role, url);
-          if (success) {
-            showResult(resultEl, 'success', `Added to tracker: ${company} - ${role}`);
-          } else {
-            showResult(resultEl, 'error', 'Failed to sync to GitHub. Check token in Settings.');
-          }
-        } else {
-          showResult(resultEl, 'info', `Would add: ${company} - ${role}. Set GitHub token in Settings to sync.`);
-        }
-      });
     });
   } catch (e) {
     showResult(resultEl, 'error', e.message);
@@ -179,14 +187,13 @@ async function addToTracker() {
 
 async function addJobToGitHub(token, company, role, url) {
   try {
-    const apiUrl = `https://api.github.com/repos/AssiamahS/scipio/contents/jobs.json`;
+    const apiUrl = 'https://api.github.com/repos/AssiamahS/scipio/contents/jobs.json';
     const headers = {
-      'Authorization': `token ${token}`,
+      'Authorization': 'token ' + token,
       'Accept': 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     };
 
-    // Get current file
     const getResp = await fetch(apiUrl, { headers });
     if (!getResp.ok) return false;
 
@@ -194,7 +201,6 @@ async function addJobToGitHub(token, company, role, url) {
     const content = atob(fileData.content.replace(/\n/g, ''));
     const db = JSON.parse(content);
 
-    // Add new job
     const now = new Date().toISOString().slice(0, 10);
     const nowFull = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
@@ -202,7 +208,7 @@ async function addJobToGitHub(token, company, role, url) {
       id: db.next_id++,
       company: company || 'Unknown',
       role: role || 'Unknown',
-      url,
+      url: url,
       salary: '',
       notes: 'Added via Scipio extension',
       status: 'applied',
@@ -211,13 +217,12 @@ async function addJobToGitHub(token, company, role, url) {
       history: [{ status: 'applied', date: nowFull }]
     });
 
-    // Push update
     const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
     const putResp = await fetch(apiUrl, {
       method: 'PUT',
-      headers,
+      headers: headers,
       body: JSON.stringify({
-        message: `Applied: ${company} - ${role}`,
+        message: 'Applied: ' + (company || 'Unknown') + ' - ' + (role || 'Unknown'),
         content: newContent,
         sha: fileData.sha,
       })
@@ -230,7 +235,7 @@ async function addJobToGitHub(token, company, role, url) {
   }
 }
 
-// Profile form
+// ===== PROFILE =====
 function fillProfileForm(profile) {
   const map = {
     pFirstName: 'first_name', pLastName: 'last_name', pEmail: 'email',
@@ -257,7 +262,7 @@ function saveProfile() {
     state: document.getElementById('pState').value,
     zip: document.getElementById('pZip').value,
     country: document.getElementById('pCountry').value,
-    location: `${document.getElementById('pCity').value}, ${document.getElementById('pState').value}`,
+    location: document.getElementById('pCity').value + ', ' + document.getElementById('pState').value,
     current_title: document.getElementById('pTitle').value,
     current_company: document.getElementById('pCompany').value,
     desired_salary: document.getElementById('pSalary').value,
@@ -266,12 +271,12 @@ function saveProfile() {
     requires_sponsorship: false,
   };
 
-  chrome.storage.local.set({ profile }, () => {
+  chrome.storage.local.set({ profile: profile }, () => {
     showResult(document.getElementById('profileResult'), 'success', 'Profile saved!');
   });
 }
 
-// Settings
+// ===== SETTINGS =====
 function fillSettingsForm(settings) {
   document.getElementById('sGhToken').value = settings.gh_token || '';
   document.getElementById('sDashUrl').value = settings.dash_url || 'https://assiamahs.github.io/scipio/';
@@ -283,14 +288,20 @@ function saveSettings() {
     gh_token: document.getElementById('sGhToken').value.trim(),
     dash_url: document.getElementById('sDashUrl').value.trim(),
   };
-  chrome.storage.local.set({ settings }, () => {
+  chrome.storage.local.set({ settings: settings }, () => {
     document.getElementById('dashLink').href = settings.dash_url;
     showResult(document.getElementById('result'), 'success', 'Settings saved!');
     switchTab('apply');
   });
 }
 
+// ===== HELPERS =====
 function showResult(el, type, html) {
-  el.className = `result show ${type}`;
+  if (!el) return;
+  el.className = 'result show ' + type;
   el.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
 }
