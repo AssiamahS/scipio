@@ -1,0 +1,24 @@
+#scipio-badge {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  background: #0f172a;
+  color: #38bdf8;
+  border: 2px solid #38bdf8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  z-index: 999999;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+  transition: transform 0.2s;
+}
+#scipio-badge:hover {
+  transform: scale(1.1);
+}

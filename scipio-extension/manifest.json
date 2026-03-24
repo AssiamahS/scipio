@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Scipio Auto-Apply",
+  "version": "1.0.0",
+  "description": "Auto-fill job applications with your profile. No bot detection.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://boards.greenhouse.io/*",
+        "*://jobs.lever.co/*",
+        "*://*.myworkdayjobs.com/*",
+        "*://*.taleo.net/*",
+        "*://*.icims.com/*",
+        "*://*.smartrecruiters.com/*",
+        "*://*.jobvite.com/*",
+        "*://*.ultipro.com/*",
+        "*://*.ziprecruiter.com/*",
+        "*://*.indeed.com/*",
+        "*://*.linkedin.com/*",
+        "*://*.glassdoor.com/*",
+        "*://*/*career*",
+        "*://*/*jobs*",
+        "*://*/*apply*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
