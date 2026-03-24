@@ -171,6 +171,48 @@
       if (match) { selectOption(select, match.value); return true; }
     }
 
+    // Education level
+    if (labelLower.includes('education') || labelLower.includes('highest level')) {
+      const match = options.find(o => {
+        const t = o.text.toLowerCase();
+        return t.includes("bachelor") || t.includes("4 year") || t.includes("undergraduate");
+      });
+      if (match) { selectOption(select, match.value); return true; }
+    }
+
+    // School - try to find "Other" or closest match
+    if (labelLower.includes('school') && !labelLower.includes('high school')) {
+      const match = options.find(o => o.text.toLowerCase().includes('other')) ||
+                    options.find(o => o.text.toLowerCase().includes('not listed'));
+      if (match) { selectOption(select, match.value); return true; }
+    }
+
+    // Degree
+    if (labelLower === 'degree' || labelLower === '* degree' || labelLower.includes('degree type')) {
+      const match = options.find(o => {
+        const t = o.text.toLowerCase();
+        return t.includes("bachelor") || t.includes("b.s") || t.includes("bs") || t.includes("b.a");
+      });
+      if (match) { selectOption(select, match.value); return true; }
+    }
+
+    // License/Certs - select "No License" or "None"
+    if (labelLower.includes('license') || labelLower.includes('cert')) {
+      const match = options.find(o => {
+        const t = o.text.toLowerCase();
+        return t.includes('no license') || t.includes('none') || t.includes('n/a') || t.includes('not applicable');
+      });
+      if (match) { selectOption(select, match.value); return true; }
+    }
+
+    // Generic "Yes or No" / "Please select" questions
+    if (labelLower.includes('yes or no') || labelLower.includes('please select yes') ||
+        labelLower.includes('were you') || labelLower.includes('have you') ||
+        labelLower.includes('are you an employee') || labelLower.includes('employee or volunteer')) {
+      const no = options.find(o => o.text.toLowerCase().trim() === 'no' || o.value.toLowerCase().trim() === 'no');
+      if (no) { selectOption(select, no.value); return true; }
+    }
+
     // Country dropdown
     if (labelLower.includes('country')) {
       const match = options.find(o =>
@@ -355,7 +397,21 @@
       }
     });
 
-    // 5. Brute-force fallback for missed fields
+    // 5. Handle textareas (facility/dates, cover letter, etc.)
+    document.querySelectorAll('textarea').forEach(ta => {
+      if (ta.value) return;
+      try { if (ta.offsetParent === null) return; } catch(e) {}
+      const label = getFieldLabel(ta);
+      const labelLow = (label || '').toLowerCase();
+
+      if (labelLow.includes('facility') || labelLow.includes('dates worked') ||
+          labelLow.includes('if yes') || labelLow.includes('if no')) {
+        setNativeValue(ta, 'N/A');
+        filled.push('textarea: N/A');
+      }
+    });
+
+    // 6. Brute-force fallback for missed fields
     document.querySelectorAll('input').forEach(inp => {
       if (inp.value) return;
       if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'submit' ||
