@@ -355,7 +355,43 @@
       }
     });
 
-    // 5. Try resume upload
+    // 5. Brute-force fallback for missed fields
+    // Scan ALL visible inputs and match by any identifying attribute
+    document.querySelectorAll('input:visible, input').forEach(inp => {
+      if (inp.value) return;
+      if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'submit' ||
+          inp.type === 'checkbox' || inp.type === 'radio' || inp.type === 'button') return;
+      if (inp.offsetParent === null) return;
+
+      const allAttrs = [
+        inp.name, inp.id, inp.placeholder, inp.getAttribute('aria-label'),
+        inp.getAttribute('autocomplete'), inp.getAttribute('data-automation-id')
+      ].filter(Boolean).map(s => s.toLowerCase());
+
+      const allText = allAttrs.join(' ');
+
+      // Address field - the most commonly missed
+      if ((allText.includes('address') || allText.includes('street')) &&
+          !allText.includes('email') && !allText.includes('ip')) {
+        if (profile.address) {
+          setNativeValue(inp, profile.address);
+          filled.push('address (fallback)');
+          return;
+        }
+      }
+
+      // Any remaining unmapped fields - try all attrs
+      for (const attr of allAttrs) {
+        const value = matchField(attr, profile);
+        if (value) {
+          setNativeValue(inp, value);
+          filled.push(attr + ' (fallback)');
+          return;
+        }
+      }
+    });
+
+    // 6. Try resume upload
     const fileInput = document.querySelector('input[type="file"]');
     if (fileInput) {
       missed.push('resume (click Upload in extension popup)');
