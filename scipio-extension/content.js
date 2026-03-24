@@ -4,6 +4,8 @@
 (function() {
   'use strict';
 
+  let profile_cache = null;
+
   const FIELD_MAP = {
     'first.name': 'first_name', 'first_name': 'first_name', 'fname': 'first_name',
     'firstname': 'first_name', 'given.name': 'first_name',
@@ -17,7 +19,8 @@
     'github': 'github', 'website': 'github', 'portfolio': 'github',
     'city': 'city', 'state': 'state', 'zip': 'zip', 'zipcode': 'zip',
     'postal': 'zip', 'postal.code': 'zip',
-    'location': 'location', 'address': 'location',
+    'location': 'address', 'address': 'address', 'street': 'address', 'street.address': 'address',
+    'address.line': 'address', 'address.1': 'address',
     'salary': 'desired_salary', 'desired.salary': 'desired_salary',
     'expected.salary': 'desired_salary', 'compensation': 'desired_salary',
     'salary.expectation': 'desired_salary',
@@ -126,9 +129,57 @@
     return false;
   }
 
+  // State abbreviation to full name mapping
+  const STATE_MAP = {
+    'AL':'Alabama','AK':'Alaska','AZ':'Arizona','AR':'Arkansas','CA':'California',
+    'CO':'Colorado','CT':'Connecticut','DE':'Delaware','FL':'Florida','GA':'Georgia',
+    'HI':'Hawaii','ID':'Idaho','IL':'Illinois','IN':'Indiana','IA':'Iowa',
+    'KS':'Kansas','KY':'Kentucky','LA':'Louisiana','ME':'Maine','MD':'Maryland',
+    'MA':'Massachusetts','MI':'Michigan','MN':'Minnesota','MS':'Mississippi','MO':'Missouri',
+    'MT':'Montana','NE':'Nebraska','NV':'Nevada','NH':'New Hampshire','NJ':'New Jersey',
+    'NM':'New Mexico','NY':'New York','NC':'North Carolina','ND':'North Dakota','OH':'Ohio',
+    'OK':'Oklahoma','OR':'Oregon','PA':'Pennsylvania','RI':'Rhode Island','SC':'South Carolina',
+    'SD':'South Dakota','TN':'Tennessee','TX':'Texas','UT':'Utah','VT':'Vermont',
+    'VA':'Virginia','WA':'Washington','WV':'West Virginia','WI':'Wisconsin','WY':'Wyoming',
+    'DC':'District of Columbia',
+  };
+
+  function selectOption(select, value) {
+    select.value = value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
+
   function handleSelectQuestion(select, label) {
     const labelLower = label.toLowerCase();
     const options = Array.from(select.options);
+
+    // State/Location dropdown
+    if (labelLower.includes('state') || labelLower.includes('location') || labelLower.includes('province')) {
+      // Try matching state abbreviation and full name
+      const stateAbbr = (profile_cache && profile_cache.state) || 'NJ';
+      const stateFull = STATE_MAP[stateAbbr.toUpperCase()] || '';
+
+      const match = options.find(o => {
+        const t = o.text.trim().toLowerCase();
+        const v = o.value.trim().toLowerCase();
+        return t === stateAbbr.toLowerCase() || t === stateFull.toLowerCase() ||
+               v === stateAbbr.toLowerCase() || v === stateFull.toLowerCase() ||
+               t.includes(stateFull.toLowerCase()) || t.includes(stateAbbr.toLowerCase());
+      });
+      if (match) { selectOption(select, match.value); return true; }
+    }
+
+    // Country dropdown
+    if (labelLower.includes('country')) {
+      const match = options.find(o =>
+        o.text.toLowerCase().includes('united states') ||
+        o.value.toLowerCase() === 'us' ||
+        o.value.toLowerCase() === 'usa'
+      );
+      if (match) { selectOption(select, match.value); return true; }
+    }
 
     // EEO - decline
     for (const pattern of DECLINE_PATTERNS) {
@@ -138,7 +189,7 @@
           o.text.toLowerCase().includes('prefer not') ||
           o.text.toLowerCase().includes('not to')
         );
-        if (decline) { select.value = decline.value; select.dispatchEvent(new Event('change', { bubbles: true })); return true; }
+        if (decline) { selectOption(select, decline.value); return true; }
       }
     }
 
@@ -146,7 +197,7 @@
     for (const pattern of YES_PATTERNS) {
       if (labelLower.includes(pattern)) {
         const yes = options.find(o => o.text.toLowerCase().includes('yes'));
-        if (yes) { select.value = yes.value; select.dispatchEvent(new Event('change', { bubbles: true })); return true; }
+        if (yes) { selectOption(select, yes.value); return true; }
       }
     }
 
@@ -154,7 +205,7 @@
     for (const pattern of NO_PATTERNS) {
       if (labelLower.includes(pattern)) {
         const no = options.find(o => o.text.toLowerCase().includes('no'));
-        if (no) { select.value = no.value; select.dispatchEvent(new Event('change', { bubbles: true })); return true; }
+        if (no) { selectOption(select, no.value); return true; }
       }
     }
 
@@ -229,6 +280,7 @@
   }
 
   function fillForm(profile) {
+    profile_cache = profile; // cache for dropdown handlers
     const ats = detectATS();
     let filled = [];
     let missed = [];
