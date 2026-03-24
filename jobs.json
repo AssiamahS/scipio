@@ -1,0 +1,174 @@
+{
+  "jobs": [
+    {
+      "id": 1,
+      "company": "Optum / UnitedHealth",
+      "role": "IT Manager - Remote",
+      "url": "https://www.indeed.com/q-optum-l-remote-jobs.html",
+      "salary": "100k-170k",
+      "notes": "Major healthcare IT employer, check careers page",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "company": "Ascension Health",
+      "role": "IT Operations Manager - Remote",
+      "url": "https://jobs.ascension.org/us/en/remote",
+      "salary": "106k-146k",
+      "notes": "Large health system, active remote hiring",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "company": "Mayo Clinic",
+      "role": "IT Manager - Remote",
+      "url": "https://jobs.mayoclinic.org/Remote",
+      "salary": "100k-165k",
+      "notes": "Top hospital system, remote tech roles available",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "company": "Humana",
+      "role": "Healthcare IT Manager - Remote",
+      "url": "https://www.linkedin.com/jobs/remote-healthcare-management-jobs",
+      "salary": "110k-150k",
+      "notes": "Insurance/health tech, large remote workforce",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "company": "Included Health",
+      "role": "IT Operations Manager - Remote",
+      "url": "https://includedhealth.com/careers/",
+      "salary": "115k-160k",
+      "notes": "Digital health company, fully remote culture",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "company": "CertifyOS",
+      "role": "Operations Analyst - Remote",
+      "url": "https://careerstn.com/certifyos-hiring-2026-operations-analyst-100-remote-wfh/",
+      "salary": "100k-130k",
+      "notes": "Health tech startup, 100% remote",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "company": "Epic Systems",
+      "role": "IT Project Manager - Remote",
+      "url": "https://careers.epic.com/jobs/",
+      "salary": "110k-150k",
+      "notes": "Your Epic Hyperspace experience is a differentiator",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "company": "Cigna Group",
+      "role": "IT Manager Healthcare - Remote",
+      "url": "https://www.glassdoor.com/Job/remote-healthcare-operations-jobs-SRCH_IL.0,6_IS11047_KO7,28.htm",
+      "salary": "110k-160k",
+      "notes": "Major health insurer, strong IT department",
+      "status": "wishlist",
+      "applied_date": "2026-03-24",
+      "updated_date": "2026-03-24",
+      "history": [
+        {
+          "status": "applied",
+          "date": "2026-03-24 01:28"
+        },
+        {
+          "status": "wishlist",
+          "date": "2026-03-24 01:28"
+        }
+      ]
+    }
+  ],
+  "next_id": 9,
+  "resume": "/Users/djsly/job-tracker/resumes/Resume - Sylvester Assiamah.docx.pdf"
+}

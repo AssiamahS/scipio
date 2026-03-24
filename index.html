@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scipio - Job Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #1e293b;margin-bottom:24px;flex-wrap:wrap;gap:10px}
+h1{font-size:24px;font-weight:700;color:#f8fafc}
+h1 span{color:#38bdf8}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:#1e293b;border-radius:12px;padding:16px;text-align:center;border:1px solid #334155}
+.stat-card .number{font-size:28px;font-weight:800;color:#38bdf8}
+.stat-card .label{font-size:12px;color:#94a3b8;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
+.stat-card.interviews .number{color:#a78bfa}
+.stat-card.offers .number{color:#34d399}
+.stat-card.rate .number{color:#fbbf24}
+.stat-card.week .number{color:#fb923c}
+.section{background:#1e293b;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #334155}
+.section h2{font-size:16px;font-weight:600;margin-bottom:16px;color:#f8fafc}
+.filters{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.filters select,.filters input{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px 12px;border-radius:8px;font-size:13px}
+.filters input{flex:1;min-width:180px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:1px solid #334155}
+td{padding:12px;font-size:14px;border-bottom:1px solid #1e293b}
+tr:hover{background:#1e293b80}
+.status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase}
+.status-wishlist{background:#334155;color:#94a3b8}
+.status-applied{background:#1e3a5f;color:#38bdf8}
+.status-screening{background:#3b2f63;color:#a78bfa}
+.status-interview{background:#2d3b2d;color:#34d399}
+.status-offer{background:#3b3520;color:#fbbf24}
+.status-rejected{background:#3b2020;color:#f87171}
+.status-withdrawn{background:#334155;color:#64748b}
+.status-accepted{background:#1a3a2a;color:#4ade80}
+.salary{color:#34d399;font-weight:600}
+.company{font-weight:600;color:#f8fafc}
+.role{color:#94a3b8}
+.url-link{color:#38bdf8;text-decoration:none;font-size:12px}
+.url-link:hover{text-decoration:underline}
+.notes-text{font-size:11px;color:#64748b;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn{padding:4px 10px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-weight:500}
+.btn-update{background:#1e3a5f;color:#38bdf8}
+.btn-remove{background:#3b2020;color:#f87171}
+.btn-apply{background:#1a3a2a;color:#4ade80}
+.btn-add{background:#38bdf8;color:#0f172a;padding:8px 16px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer}
+.btn-add:hover{background:#7dd3fc}
+.btn-sm{background:#334155;color:#94a3b8;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px}
+.btn-sm:hover{background:#475569}
+.empty{text-align:center;padding:40px;color:#64748b}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:#1e293b;border-radius:16px;padding:24px;width:90%;max-width:500px;border:1px solid #334155;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:16px;color:#f8fafc}
+.modal label{display:block;font-size:13px;color:#94a3b8;margin:10px 0 4px}
+.modal input,.modal select,.modal textarea{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:10px 12px;border-radius:8px;font-size:14px;font-family:inherit}
+.modal textarea{resize:vertical;height:60px}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.btn-cancel{background:#334155;color:#94a3b8;padding:8px 16px;border-radius:8px;border:none;cursor:pointer}
+.btn-save{background:#38bdf8;color:#0f172a;padding:8px 20px;border-radius:8px;border:none;font-weight:600;cursor:pointer}
+.pipeline{display:flex;gap:4px;flex-wrap:wrap}
+.pipe-stage{flex:1;min-width:90px;text-align:center;padding:10px 6px;border-radius:8px;background:#0f172a;border:1px solid #334155}
+.pipe-stage .pipe-count{font-size:22px;font-weight:700}
+.pipe-stage .pipe-label{font-size:10px;color:#64748b;text-transform:uppercase}
+.target-info{background:#0f172a;border-radius:8px;padding:12px 16px;font-size:13px;color:#94a3b8;display:flex;gap:16px;flex-wrap:wrap}
+.target-info span{color:#e2e8f0;font-weight:500}
+.footer{font-size:12px;color:#475569;text-align:center;padding:16px}
+.footer a{color:#38bdf8}
+.toast{position:fixed;bottom:20px;right:20px;background:#334155;color:#e2e8f0;padding:12px 20px;border-radius:10px;font-size:14px;z-index:200;display:none;border:1px solid #475569}
+.toast.show{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  th:nth-child(4),td:nth-child(4){display:none}
+  .actions{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span>S</span>cipio</h1>
+    <div class="header-actions">
+      <button class="btn-sm" onclick="exportData()" title="Download JSON backup">Export</button>
+      <button class="btn-sm" onclick="document.getElementById('importFile').click()" title="Import JSON backup">Import</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn-add" onclick="openAdd()">+ Add Job</button>
+    </div>
+  </header>
+
+  <div class="target-info" style="margin-bottom:20px">
+    <div>Target: <span>IT Manager / Healthcare Tech</span></div>
+    <div>Location: <span>Remote</span></div>
+    <div>Min Salary: <span>$100,000+</span></div>
+    <div>Profile: <span>Sylvester Assiamah</span></div>
+  </div>
+
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card"><div class="number" id="totalCount">0</div><div class="label">Total</div></div>
+    <div class="stat-card interviews"><div class="number" id="interviewCount">0</div><div class="label">Interviews</div></div>
+    <div class="stat-card offers"><div class="number" id="offerCount">0</div><div class="label">Offers</div></div>
+    <div class="stat-card rate"><div class="number" id="responseRate">0%</div><div class="label">Response Rate</div></div>
+    <div class="stat-card week"><div class="number" id="weekCount">0</div><div class="label">This Week</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Pipeline</h2>
+    <div class="pipeline" id="pipeline"></div>
+  </div>
+
+  <div class="section">
+    <h2>Applications</h2>
+    <div class="filters">
+      <select id="filterStatus" onchange="renderTable()">
+        <option value="">All Statuses</option>
+        <option value="wishlist">Wishlist</option>
+        <option value="applied">Applied</option>
+        <option value="screening">Screening</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+        <option value="withdrawn">Withdrawn</option>
+        <option value="accepted">Accepted</option>
+      </select>
+      <input type="text" id="searchBox" placeholder="Search company or role..." oninput="renderTable()">
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Company</th><th>Role</th><th>Status</th><th>Date</th><th>Salary</th><th>Actions</th></tr></thead>
+      <tbody id="jobsBody"></tbody>
+    </table>
+    </div>
+    <div class="empty" id="emptyMsg" style="display:none">No applications yet. Click "+ Add Job" to get started.</div>
+  </div>
+
+  <div class="section" id="logSection">
+    <h2>Activity Log</h2>
+    <div id="activityLog" style="font-size:13px;color:#94a3b8;max-height:200px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Add Application</h3>
+    <label>Company *</label><input type="text" id="mCompany" placeholder="e.g. Optum">
+    <label>Role *</label><input type="text" id="mRole" placeholder="e.g. IT Manager">
+    <label>Job URL</label><input type="text" id="mUrl" placeholder="Link to posting">
+    <label>Salary</label><input type="text" id="mSalary" placeholder="e.g. 120k-150k">
+    <label>Status</label>
+    <select id="mStatus">
+      <option value="wishlist">Wishlist</option>
+      <option value="applied" selected>Applied</option>
+      <option value="screening">Screening</option>
+      <option value="interview">Interview</option>
+      <option value="offer">Offer</option>
+    </select>
+    <label>Notes</label><textarea id="mNotes" placeholder="Any notes..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveJob()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status Modal -->
+<div class="modal-overlay" id="statusModal">
+  <div class="modal">
+    <h3>Update Status</h3>
+    <input type="hidden" id="statusJobId">
+    <label>New Status</label>
+    <select id="newStatus">
+      <option value="wishlist">Wishlist</option>
+      <option value="applied">Applied</option>
+      <option value="screening">Screening</option>
+      <option value="interview">Interview</option>
+      <option value="offer">Offer</option>
+      <option value="rejected">Rejected</option>
+      <option value="withdrawn">Withdrawn</option>
+      <option value="accepted">Accepted</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn-save" onclick="confirmUpdateStatus()">Update</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="footer">
+  Scipio Job Tracker | Data stored in your browser (localStorage) |
+  <a href="#" onclick="exportData();return false">Backup your data</a>
+</div>
+
+<script>
+const STORAGE_KEY = 'scipio_jobtracker';
+const LOG_KEY = 'scipio_log';
+let db = {jobs:[], next_id:1};
+const STATUSES = ['wishlist','applied','screening','interview','offer','rejected','withdrawn','accepted'];
+const STATUS_COLORS = {
+  wishlist:'#94a3b8',applied:'#38bdf8',screening:'#a78bfa',interview:'#34d399',
+  offer:'#fbbf24',rejected:'#f87171',withdrawn:'#64748b',accepted:'#4ade80'
+};
+
+// Seed data for first visit
+const SEED = {"jobs":[
+  {"id":1,"company":"Optum / UnitedHealth","role":"IT Manager - Remote","url":"https://www.indeed.com/q-optum-l-remote-jobs.html","salary":"100k-170k","notes":"Major healthcare IT employer, check careers page","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":2,"company":"Ascension Health","role":"IT Operations Manager - Remote","url":"https://jobs.ascension.org/us/en/remote","salary":"106k-146k","notes":"Large health system, active remote hiring","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":3,"company":"Mayo Clinic","role":"IT Manager - Remote","url":"https://jobs.mayoclinic.org/Remote","salary":"100k-165k","notes":"Top hospital system, remote tech roles available","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":4,"company":"Humana","role":"Healthcare IT Manager - Remote","url":"https://www.linkedin.com/jobs/remote-healthcare-management-jobs","salary":"110k-150k","notes":"Insurance/health tech, large remote workforce","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":5,"company":"Included Health","role":"IT Operations Manager - Remote","url":"https://includedhealth.com/careers/","salary":"115k-160k","notes":"Digital health company, fully remote culture","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":6,"company":"CertifyOS","role":"Operations Analyst - Remote","url":"https://careerstn.com/certifyos-hiring-2026-operations-analyst-100-remote-wfh/","salary":"100k-130k","notes":"Health tech startup, 100% remote","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":7,"company":"Epic Systems","role":"IT Project Manager - Remote","url":"https://careers.epic.com/jobs/","salary":"110k-150k","notes":"Your Epic Hyperspace experience is a differentiator","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
+  {"id":8,"company":"Cigna Group","role":"IT Manager Healthcare - Remote","url":"https://www.glassdoor.com/Job/remote-healthcare-operations-jobs-SRCH_IL.0,6_IS11047_KO7,28.htm","salary":"110k-160k","notes":"Major health insurer, strong IT department","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]}
+],"next_id":9};
+
+function loadData(){
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if(stored){
+    try{db=JSON.parse(stored);} catch(e){db={...SEED};}
+  } else {
+    db = JSON.parse(JSON.stringify(SEED));
+    saveData();
+  }
+  render();
+  renderLog();
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+function addLog(msg){
+  const logs = JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
+  logs.unshift({time:new Date().toISOString().slice(0,16).replace('T',' '), msg});
+  if(logs.length>100) logs.length=100;
+  localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+  renderLog();
+}
+
+function renderLog(){
+  const logs = JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
+  const el = document.getElementById('activityLog');
+  if(logs.length===0){el.innerHTML='<div style="color:#475569">No activity yet.</div>';return;}
+  el.innerHTML = logs.slice(0,20).map(l=>`<div style="padding:4px 0;border-bottom:1px solid #1e293b"><span style="color:#475569">${l.time}</span> ${l.msg}</div>`).join('');
+}
+
+function render(){renderStats();renderPipeline();renderTable();}
+
+function renderStats(){
+  const jobs=db.jobs||[];
+  document.getElementById('totalCount').textContent=jobs.length;
+  document.getElementById('interviewCount').textContent=jobs.filter(j=>['interview','offer','accepted'].includes(j.status)).length;
+  document.getElementById('offerCount').textContent=jobs.filter(j=>['offer','accepted'].includes(j.status)).length;
+  const responded=jobs.filter(j=>['screening','interview','offer','accepted'].includes(j.status)).length;
+  const decided=responded+jobs.filter(j=>j.status==='rejected').length;
+  document.getElementById('responseRate').textContent=decided>0?Math.round(responded/decided*100)+'%':'--';
+  const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
+  const ws=weekAgo.toISOString().slice(0,10);
+  document.getElementById('weekCount').textContent=jobs.filter(j=>j.applied_date>=ws).length;
+}
+
+function renderPipeline(){
+  const counts={};STATUSES.forEach(s=>counts[s]=0);
+  (db.jobs||[]).forEach(j=>counts[j.status]=(counts[j.status]||0)+1);
+  document.getElementById('pipeline').innerHTML=STATUSES.map(s=>`
+    <div class="pipe-stage" style="cursor:pointer" onclick="document.getElementById('filterStatus').value='${s}';renderTable()">
+      <div class="pipe-count" style="color:${STATUS_COLORS[s]}">${counts[s]}</div>
+      <div class="pipe-label">${s}</div>
+    </div>`).join('');
+}
+
+function renderTable(){
+  const filter=document.getElementById('filterStatus').value;
+  const search=document.getElementById('searchBox').value.toLowerCase();
+  let jobs=(db.jobs||[]).filter(j=>{
+    if(filter&&j.status!==filter)return false;
+    if(search&&!j.company.toLowerCase().includes(search)&&!j.role.toLowerCase().includes(search))return false;
+    return true;
+  });
+  jobs.sort((a,b)=>{
+    const so=STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status);
+    return so!==0?so:b.applied_date.localeCompare(a.applied_date);
+  });
+  const tbody=document.getElementById('jobsBody');
+  const empty=document.getElementById('emptyMsg');
+  if(jobs.length===0){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=jobs.map(j=>`<tr>
+    <td><div class="company">${esc(j.company)}</div>
+      ${j.url?`<a class="url-link" href="${esc(j.url)}" target="_blank" rel="noopener">View posting</a>`:''}
+      ${j.notes?`<div class="notes-text" title="${esc(j.notes)}">${esc(j.notes)}</div>`:''}
+    </td>
+    <td class="role">${esc(j.role)}</td>
+    <td><span class="status status-${j.status}">${j.status}</span></td>
+    <td>${j.applied_date}</td>
+    <td class="salary">${j.salary?'$'+esc(j.salary):'-'}</td>
+    <td class="actions">
+      ${j.status==='wishlist'?`<button class="btn btn-apply" onclick="quickApply(${j.id})">Mark Applied</button>`:''}
+      <button class="btn btn-update" onclick="openStatus(${j.id},'${j.status}')">Status</button>
+      <button class="btn btn-remove" onclick="removeJob(${j.id})">Remove</button>
+    </td></tr>`).join('');
+}
+
+function esc(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+function openAdd(){
+  ['mCompany','mRole','mUrl','mSalary','mNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mStatus').value='applied';
+  document.getElementById('modalTitle').textContent='Add Application';
+  document.getElementById('modal').classList.add('active');
+}
+function closeModal(){document.getElementById('modal').classList.remove('active')}
+
+function saveJob(){
+  const company=document.getElementById('mCompany').value.trim();
+  const role=document.getElementById('mRole').value.trim();
+  if(!company||!role){alert('Company and Role required');return;}
+  const now=new Date().toISOString().slice(0,10);
+  const nowFull=new Date().toISOString().slice(0,16).replace('T',' ');
+  const status=document.getElementById('mStatus').value;
+  const job={id:db.next_id++,company,role,url:document.getElementById('mUrl').value.trim(),salary:document.getElementById('mSalary').value.trim(),notes:document.getElementById('mNotes').value.trim(),status,applied_date:now,updated_date:now,history:[{status,date:nowFull}]};
+  db.jobs.push(job);
+  saveData();render();closeModal();
+  addLog(`Added <span style="color:#f8fafc">${esc(company)}</span> - ${esc(role)} [${status}]`);
+  toast(`Added: ${company}`);
+}
+
+function quickApply(id){
+  const job=db.jobs.find(j=>j.id===id);
+  if(!job)return;
+  job.status='applied';
+  job.applied_date=new Date().toISOString().slice(0,10);
+  job.updated_date=job.applied_date;
+  job.history.push({status:'applied',date:new Date().toISOString().slice(0,16).replace('T',' ')});
+  saveData();render();
+  addLog(`Applied to <span style="color:#38bdf8">${esc(job.company)}</span> - ${esc(job.role)}`);
+  toast(`Applied: ${job.company}`);
+}
+
+function openStatus(id,current){
+  document.getElementById('statusJobId').value=id;
+  document.getElementById('newStatus').value=current;
+  document.getElementById('statusModal').classList.add('active');
+}
+function closeStatusModal(){document.getElementById('statusModal').classList.remove('active')}
+
+function confirmUpdateStatus(){
+  const id=parseInt(document.getElementById('statusJobId').value);
+  const ns=document.getElementById('newStatus').value;
+  const job=db.jobs.find(j=>j.id===id);
+  if(job){
+    const old=job.status;
+    job.status=ns;
+    job.updated_date=new Date().toISOString().slice(0,10);
+    job.history.push({status:ns,date:new Date().toISOString().slice(0,16).replace('T',' ')});
+    saveData();render();
+    addLog(`${esc(job.company)}: <span style="color:${STATUS_COLORS[old]}">${old}</span> → <span style="color:${STATUS_COLORS[ns]}">${ns}</span>`);
+    toast(`Updated: ${job.company} → ${ns}`);
+  }
+  closeStatusModal();
+}
+
+function removeJob(id){
+  if(!confirm('Remove this application?'))return;
+  const job=db.jobs.find(j=>j.id===id);
+  db.jobs=db.jobs.filter(j=>j.id!==id);
+  saveData();render();
+  if(job)addLog(`Removed <span style="color:#f87171">${esc(job.company)}</span>`);
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`scipio-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Data exported');
+}
+
+function importData(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const imported=JSON.parse(ev.target.result);
+      if(imported.jobs){
+        // Merge: add jobs that don't exist by company+role
+        let added=0;
+        imported.jobs.forEach(ij=>{
+          const exists=db.jobs.some(j=>j.company===ij.company&&j.role===ij.role);
+          if(!exists){ij.id=db.next_id++;db.jobs.push(ij);added++;}
+        });
+        saveData();render();
+        addLog(`Imported ${added} new job(s)`);
+        toast(`Imported ${added} jobs`);
+      }
+    }catch(err){alert('Invalid JSON file');}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+loadData();
+</script>
+</body>
+</html>
