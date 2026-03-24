@@ -106,7 +106,12 @@
     }
 
     el.value = value;
-    el.setAttribute('value', value);  // Key: update DOM attribute for validation
+    if (el.tagName === 'TEXTAREA') {
+      el.textContent = value;
+      el.innerHTML = value;
+    } else {
+      el.setAttribute('value', value);
+    }
 
     // 3. Dispatch Simplify's exact event sequence
     el.dispatchEvent(new KeyboardEvent('keydown', evtOpts));

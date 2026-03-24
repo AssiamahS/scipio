@@ -44,7 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load saved data - merge with defaults so new fields always exist
   chrome.storage.local.get(['profile', 'settings', 'resume_data'], (data) => {
-    const profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
+    const stored = data.profile || {};
+    // Merge: use stored value ONLY if it's non-empty, otherwise use default
+    const profile = {};
+    for (const key of Object.keys(DEFAULT_PROFILE)) {
+      profile[key] = (stored[key] !== undefined && stored[key] !== '') ? stored[key] : DEFAULT_PROFILE[key];
+    }
     chrome.storage.local.set({ profile: profile });
     fillProfileForm(profile);
 
