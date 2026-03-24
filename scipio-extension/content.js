@@ -518,6 +518,30 @@
       }
     }
 
+    // Click today's date in any open calendar/date picker widget
+    setTimeout(() => {
+      const today = new Date().getDate();
+      // Common date picker patterns
+      const selectors = [
+        `td[data-day="${today}"]`, `td.today`, `td.current`,
+        `.datepicker td:not(.disabled):not(.old):not(.new)`,
+        `[aria-label*="today"]`, `[aria-current="date"]`,
+        `.ui-datepicker-today a`,
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) { el.click(); log('DATE: clicked', sel); return; }
+      }
+      // Brute force: find a td or button with just today's date number
+      for (const el of document.querySelectorAll('td, button, a, span')) {
+        const text = el.textContent.trim();
+        if (text === String(today) && el.offsetParent !== null) {
+          const parent = el.closest('table, .calendar, .datepicker, [class*="calendar"], [class*="picker"]');
+          if (parent) { el.click(); log('DATE: clicked', text, 'in calendar'); return; }
+        }
+      }
+    }, 500);
+
     // 4. Handle select dropdowns
     document.querySelectorAll('select:not([readonly])').forEach(select => {
       if (select.value && select.selectedIndex > 0) return;
