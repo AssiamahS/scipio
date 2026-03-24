@@ -432,33 +432,59 @@
         continue;
       }
 
-      // EEO: gender, race, veteran, disability - select "decline" / "do not want to answer"
+      // EEO questions - answer with actual info
       const ql = questionLabel.toLowerCase();
-      if (ql.includes('gender') || ql.includes('race') || ql.includes('ethnicity') ||
-          ql.includes('veteran') || ql.includes('disability') || ql.includes('eeo') ||
-          ql.includes('self identify') || ql.includes('self-identify')) {
-        const decline = radios.find(r => {
-          const rLabel = (getFieldLabel(r) || '').toLowerCase();
-          return rLabel.includes('choose not') || rLabel.includes('do not want') ||
-                 rLabel.includes('decline') || rLabel.includes('prefer not') ||
-                 rLabel.includes('not to self') || rLabel.includes('i do not');
+
+      // Gender -> Male
+      if (ql.includes('gender') || ql.includes('sex')) {
+        const match = radios.find(r => (getFieldLabel(r) || '').toLowerCase().trim() === 'male');
+        if (match) { match.click(); filled.push('gender: Male'); continue; }
+      }
+
+      // Race -> Black or African American
+      if (ql.includes('race') || ql.includes('ethnicity')) {
+        const match = radios.find(r => {
+          const l = (getFieldLabel(r) || '').toLowerCase();
+          return l.includes('black') || l.includes('african american');
         });
-        if (decline) {
-          decline.click();
-          filled.push(`eeo: ${questionLabel.slice(0, 40)}`);
-          continue;
-        }
+        if (match) { match.click(); filled.push('race: Black/African American'); continue; }
+      }
+
+      // Disability -> No
+      if (ql.includes('disability')) {
+        const match = radios.find(r => {
+          const l = (getFieldLabel(r) || '').toLowerCase();
+          return l.includes('no, i do not') || l.includes('i do not have a disability');
+        });
+        if (match) { match.click(); filled.push('disability: No'); continue; }
+      }
+
+      // Veteran -> Not a protected veteran
+      if (ql.includes('veteran')) {
+        const match = radios.find(r => {
+          const l = (getFieldLabel(r) || '').toLowerCase();
+          return l.includes('not a protected') || l.includes('i am not');
+        });
+        if (match) { match.click(); filled.push('veteran: No'); continue; }
+      }
+
+      // Any other EEO -> decline
+      if (ql.includes('eeo') || ql.includes('self identify') || ql.includes('self-identify')) {
+        const decline = radios.find(r => {
+          const l = (getFieldLabel(r) || '').toLowerCase();
+          return l.includes('choose not') || l.includes('decline') || l.includes('prefer not');
+        });
+        if (decline) { decline.click(); filled.push('eeo: decline'); continue; }
       }
     }
 
-    // 3b. Click any standalone "I choose not to self identify" / "I do not want to answer" radio/label
+    // 3b. Standalone EEO radios that weren't in groups
     for (const radio of document.querySelectorAll('input[type="radio"]:not(:checked)')) {
       const rLabel = (getFieldLabel(radio) || '').toLowerCase();
-      if (rLabel.includes('choose not to self') || rLabel.includes('do not want to answer') ||
-          rLabel.includes('i do not have a disability')) {
-        radio.click();
-        filled.push('eeo: ' + rLabel.slice(0, 40));
-      }
+      if (rLabel === 'male') { radio.click(); filled.push('gender: Male'); }
+      else if (rLabel.includes('black') || rLabel.includes('african american')) { radio.click(); filled.push('race: Black'); }
+      else if (rLabel.includes('no, i do not have a disability') || rLabel.includes('i do not have a disability')) { radio.click(); filled.push('disability: No'); }
+      else if (rLabel.includes('not a protected veteran') || rLabel.includes('i am not a protected')) { radio.click(); filled.push('veteran: No'); }
     }
 
     // 4. Handle select dropdowns
