@@ -85,15 +85,13 @@
   }
 
   function setNativeValue(el, value) {
-    // Trigger React/Vue/Angular-compatible value setting
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype, 'value'
-    )?.set || Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype, 'value'
-    )?.set;
+    // Pick the right prototype setter for the element type
+    const isTextarea = el.tagName === 'TEXTAREA';
+    const proto = isTextarea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
 
-    if (nativeInputValueSetter) {
-      nativeInputValueSetter.call(el, value);
+    if (setter) {
+      setter.call(el, value);
     } else {
       el.value = value;
     }
@@ -101,6 +99,12 @@
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
     el.dispatchEvent(new Event('blur', { bubbles: true }));
+    log('SET', el.tagName, getFieldLabel(el) || el.name || el.id, '=', value.slice(0, 30));
+  }
+
+  // Debug logger - check console with: Scipio:
+  function log(...args) {
+    console.log('%c[Scipio]', 'color: #38bdf8; font-weight: bold', ...args);
   }
 
   function handleYesNoQuestion(label, radios) {
@@ -326,6 +330,8 @@
     const ats = detectATS();
     let filled = [];
     let missed = [];
+    log('=== FILL START ===', 'ATS:', ats, 'URL:', window.location.href);
+    log('Profile address:', profile.address);
 
     // 1. Fill ATS-specific fields first
     let specificFields = [];
@@ -401,6 +407,7 @@
     document.querySelectorAll('textarea').forEach(ta => {
       if (ta.value) return;
       try { if (ta.offsetParent === null) return; } catch(e) {}
+      log('TEXTAREA found:', ta.name || ta.id || '(no name/id)');
 
       // Get label from all possible sources
       const label = getFieldLabel(ta);
@@ -482,6 +489,9 @@
       }
     });
 
+    log('=== FILL DONE ===', 'Filled:', filled.length, 'Missed:', missed.length);
+    log('Filled:', filled);
+    log('Missed:', missed);
     return { ats, filled, missed, fieldCount: inputs.length };
   }
 
