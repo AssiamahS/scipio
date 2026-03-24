@@ -172,8 +172,13 @@
     if (url.includes('smartrecruiters.com')) return 'smartrecruiters';
     if (url.includes('icims.com')) return 'icims';
     if (url.includes('jobvite.com')) return 'jobvite';
-    if (document.body.innerHTML.toLowerCase().includes('greenhouse')) return 'greenhouse';
-    if (document.body.innerHTML.toLowerCase().includes('lever')) return 'lever';
+    if (url.includes('silkroad.com')) return 'silkroad';
+    if (url.includes('taleo.net')) return 'taleo';
+    if (url.includes('successfactors.com')) return 'successfactors';
+    if (url.includes('ultipro.com')) return 'ultipro';
+    if (url.includes('paycom.com')) return 'paycom';
+    if (url.includes('bamboohr.com')) return 'bamboohr';
+    if (url.includes('ashbyhq.com')) return 'ashby';
     return 'generic';
   }
 
