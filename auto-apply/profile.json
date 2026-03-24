@@ -1,0 +1,53 @@
+{
+  "first_name": "Sylvester",
+  "last_name": "Assiamah",
+  "email": "sylvesterassiamah105@gmail.com",
+  "phone": "908-839-0555",
+  "linkedin": "https://linkedin.com/in/sylvesterassiamah",
+  "github": "https://github.com/AssiamahS",
+  "location": "New Jersey, USA",
+  "city": "Red Bank",
+  "state": "NJ",
+  "zip": "07701",
+  "country": "United States",
+  "work_authorization": "Authorized to work in the US",
+  "requires_sponsorship": false,
+  "years_experience": "7",
+  "current_title": "Infrastructure Operations",
+  "current_company": "Hackensack Meridian Health Network",
+  "desired_salary": "120000",
+  "willing_to_relocate": false,
+  "remote_only": true,
+  "resume_path": "/Users/djsly/job-tracker/resumes/Resume - Sylvester Assiamah.docx.pdf",
+  "skills": [
+    "Python", "SQL", "JavaScript", "React", "PowerShell",
+    "AWS", "Azure", "Google Cloud Platform", "Databricks",
+    "MySQL", "PostgreSQL", "MongoDB",
+    "Citrix", "SCCM/MECM", "VMware", "RDP",
+    "TCP/IP", "DNS", "DHCP", "VLANs", "VPN",
+    "Jira", "ServiceNow", "Confluence", "GitHub Copilot",
+    "Linux", "Windows Server", "Active Directory", "Azure AD",
+    "Okta", "Epic Hyperspace", "EHR Systems", "HIPAA Compliance",
+    "Project Management", "Team Leadership", "Data Analysis"
+  ],
+  "education": [
+    {
+      "school": "Rutgers University",
+      "degree": "Certificate",
+      "field": "Full Stack Web Development",
+      "graduation": "2024-05"
+    },
+    {
+      "school": "MCPHS University",
+      "degree": "Bachelor's",
+      "field": "Pharmaceutical Business",
+      "graduation": "2018-05"
+    }
+  ],
+  "certifications": [
+    "Microsoft Technology Association (MTA) Networking Fundamentals",
+    "Okta Certification",
+    "Sailpoint IdentityNow Advanced Training Certificate"
+  ],
+  "summary": "Results-driven IT Manager and Engineer with extensive experience in network administration, cybersecurity, and infrastructure operations within fast-paced enterprise environments. Proven track record of optimizing network performance, automating systems, implementing security controls, and deploying scalable IT solutions."
+}

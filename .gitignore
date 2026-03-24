@@ -1,0 +1,7 @@
+auto-apply/screenshots/
+auto-apply/apply_log.json
+auto-apply/.venv/
+__pycache__/
+*.pyc
+resumes/
+.env
