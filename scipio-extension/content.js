@@ -356,8 +356,8 @@
     });
 
     // 5. Brute-force fallback for missed fields
-    // Scan ALL visible inputs and match by any identifying attribute
-    document.querySelectorAll('input:visible, input').forEach(inp => {
+    // Scan ALL inputs and match by any identifying attribute
+    document.querySelectorAll('input').forEach(inp => {
       if (inp.value) return;
       if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'submit' ||
           inp.type === 'checkbox' || inp.type === 'radio' || inp.type === 'button') return;
