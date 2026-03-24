@@ -84,27 +84,50 @@
     return '';
   }
 
-  function setNativeValue(el, value) {
-    // Technique extracted from Simplify Copilot's source code
+  async function setNativeValue(el, value) {
     const evtOpts = { bubbles: true };
+    const label = getFieldLabel(el) || el.name || el.id;
 
-    // 1. Focus + click (activate the field)
+    // Focus + click
     el.focus();
     el.click();
 
-    // 2. Set value using Simplify's W() technique
-    // Check both instance and prototype setters (handles React override)
-    const instanceSetter = Object.getOwnPropertyDescriptor(el, 'value')?.set;
-    const protoSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
+    // METHOD 1: Clipboard paste (most reliable for textareas + validation)
+    if (el.tagName === 'TEXTAREA' || !trySimplifySet(el, value)) {
+      try {
+        // Save current clipboard
+        const saved = await navigator.clipboard.readText().catch(() => '');
+        // Write our value to clipboard
+        await navigator.clipboard.writeText(value);
+        // Select all existing content
+        el.select();
+        // Paste from clipboard - browser treats this as real user input
+        document.execCommand('selectAll');
+        document.execCommand('insertText', false, value);
 
-    if (instanceSetter && protoSetter && instanceSetter !== protoSetter) {
-      protoSetter.call(el, value);  // React has overridden instance, use prototype
-    } else if (instanceSetter) {
-      instanceSetter.call(el, value);
-    } else if (protoSetter) {
-      protoSetter.call(el, value);
+        // If still empty, try paste command
+        if (!el.value) {
+          document.execCommand('paste');
+        }
+
+        // Restore clipboard
+        if (saved) await navigator.clipboard.writeText(saved).catch(() => {});
+
+        if (el.value === value) {
+          log('SET (clipboard)', el.tagName, label, '=', value.slice(0, 30));
+          el.dispatchEvent(new Event('change', evtOpts));
+          el.dispatchEvent(new FocusEvent('blur', evtOpts));
+          return;
+        }
+      } catch(e) {
+        log('Clipboard method failed:', e.message);
+      }
     }
 
+    // METHOD 2: Simplify Copilot technique (works for most inputs)
+    trySimplifySet(el, value);
+
+    // METHOD 3: Direct brute force
     el.value = value;
     if (el.tagName === 'TEXTAREA') {
       el.textContent = value;
@@ -113,7 +136,7 @@
       el.setAttribute('value', value);
     }
 
-    // 3. Dispatch Simplify's exact event sequence
+    // Event chain
     el.dispatchEvent(new KeyboardEvent('keydown', evtOpts));
     el.dispatchEvent(new KeyboardEvent('keypress', evtOpts));
     el.dispatchEvent(new CustomEvent('textInput', evtOpts));
@@ -122,7 +145,22 @@
     el.dispatchEvent(new Event('change', evtOpts));
     el.dispatchEvent(new FocusEvent('blur', evtOpts));
 
-    log('SET', el.tagName, getFieldLabel(el) || el.name || el.id, '=', value.slice(0, 30));
+    log('SET', el.tagName, label, '=', value.slice(0, 30));
+  }
+
+  function trySimplifySet(el, value) {
+    try {
+      const instanceSetter = Object.getOwnPropertyDescriptor(el, 'value')?.set;
+      const protoSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
+      if (instanceSetter && protoSetter && instanceSetter !== protoSetter) {
+        protoSetter.call(el, value);
+      } else if (protoSetter) {
+        protoSetter.call(el, value);
+      } else if (instanceSetter) {
+        instanceSetter.call(el, value);
+      }
+      return el.value === value;
+    } catch(e) { return false; }
   }
 
   // Debug logger - check console with: Scipio:
@@ -348,7 +386,7 @@
     ];
   }
 
-  function fillForm(profile) {
+  async function fillForm(profile) {
     profile_cache = profile; // cache for dropdown handlers
     const ats = detectATS();
     let filled = [];
@@ -365,7 +403,7 @@
     for (const [selector, value] of specificFields) {
       const el = document.querySelector(selector);
       if (el && !el.value) {
-        setNativeValue(el, value);
+        await setNativeValue(el, value);
         filled.push(selector);
       }
     }
@@ -386,7 +424,7 @@
 
       const value = matchField(label, profile);
       if (value) {
-        setNativeValue(input, value);
+        await setNativeValue(input, value);
         filled.push(label);
       }
     }
@@ -453,12 +491,12 @@
       // Cover letter / tell us about yourself
       if (allText.includes('cover letter') || allText.includes('why are you interested') ||
           allText.includes('tell us about')) {
-        setNativeValue(ta, profile.summary || 'N/A');
+        await setNativeValue(ta, profile.summary || 'N/A');
         filled.push('textarea: summary');
       }
       // Everything else on a job application page -> N/A
       else {
-        setNativeValue(ta, 'N/A');
+        await setNativeValue(ta, 'N/A');
         filled.push('textarea: N/A');
       }
     });
@@ -484,7 +522,7 @@
       if ((allText.includes('address') || allText.includes('street')) &&
           !allText.includes('email') && !allText.includes('ip-')) {
         const addr = profile.address || '1174 Summit Ave';
-        setNativeValue(inp, addr);
+        await setNativeValue(inp, addr);
         filled.push('address (fallback)');
         return;
       }
@@ -493,7 +531,7 @@
       for (const attr of allAttrs) {
         const value = matchField(attr, profile);
         if (value) {
-          setNativeValue(inp, value);
+          await setNativeValue(inp, value);
           filled.push(attr + ' (fallback)');
           return;
         }
@@ -540,9 +578,9 @@
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action === 'fill') {
-      chrome.storage.local.get(['profile', 'resume_data'], (data) => {
+      chrome.storage.local.get(['profile', 'resume_data'], async (data) => {
         if (data.profile) {
-          const result = fillForm(data.profile);
+          const result = await fillForm(data.profile);
 
           // Try attaching resume
           if (data.resume_data) {
