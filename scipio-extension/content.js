@@ -365,11 +365,55 @@
   }
 
   // Listen for messages from popup
+  // Resume attachment via DataTransfer
+  function attachResume(resumeData) {
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    if (fileInputs.length === 0) return false;
+
+    try {
+      // Convert base64 data URL to File object
+      const arr = resumeData.data.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      const file = new File([u8arr], resumeData.name, { type: mime });
+
+      // Use DataTransfer to set the file on the input
+      const dt = new DataTransfer();
+      dt.items.add(file);
+
+      for (const fileInput of fileInputs) {
+        fileInput.files = dt.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      return true;
+    } catch (e) {
+      console.error('Scipio: resume attach failed:', e);
+      return false;
+    }
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action === 'fill') {
-      chrome.storage.local.get('profile', (data) => {
+      chrome.storage.local.get(['profile', 'resume_data'], (data) => {
         if (data.profile) {
           const result = fillForm(data.profile);
+
+          // Try attaching resume
+          if (data.resume_data) {
+            const attached = attachResume(data.resume_data);
+            if (attached) {
+              result.filled.push('resume (auto-attached)');
+            } else {
+              result.missed.push('resume (no file input found)');
+            }
+          } else {
+            result.missed.push('resume (upload one in Profile tab)');
+          }
+
           sendResponse(result);
         } else {
           sendResponse({ error: 'No profile saved. Open extension popup to set up.' });

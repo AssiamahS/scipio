@@ -39,8 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
 
+  // Resume file picker
+  document.getElementById('pResume').addEventListener('change', handleResumeUpload);
+
   // Load saved data
-  chrome.storage.local.get(['profile', 'settings'], (data) => {
+  chrome.storage.local.get(['profile', 'settings', 'resume_data'], (data) => {
     const profile = data.profile || DEFAULT_PROFILE;
     if (!data.profile) chrome.storage.local.set({ profile: DEFAULT_PROFILE });
     fillProfileForm(profile);
@@ -48,6 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const settings = data.settings || DEFAULT_SETTINGS;
     if (!data.settings) chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
     fillSettingsForm(settings);
+
+    // Show resume status
+    if (data.resume_data) {
+      document.getElementById('resumeStatus').textContent =
+        'Stored: ' + data.resume_data.name + ' (' + Math.round(data.resume_data.size / 1024) + ' KB)';
+    } else {
+      document.getElementById('resumeStatus').textContent = 'No resume stored. Upload one to enable auto-attach.';
+    }
   });
 
   // Detect current page
@@ -295,6 +306,30 @@ function saveSettings() {
     showResult(document.getElementById('result'), 'success', 'Settings saved!');
     switchTab('apply');
   });
+}
+
+// ===== RESUME =====
+function handleResumeUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const base64 = ev.target.result; // data:application/pdf;base64,...
+    const resumeData = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      data: base64,
+    };
+    chrome.storage.local.set({ resume_data: resumeData }, () => {
+      document.getElementById('resumeStatus').textContent =
+        'Stored: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+      showResult(document.getElementById('profileResult'), 'success',
+        'Resume saved! It will be auto-attached to applications.');
+    });
+  };
+  reader.readAsDataURL(file);
 }
 
 // ===== HELPERS =====
