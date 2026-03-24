@@ -85,24 +85,38 @@
   }
 
   function setNativeValue(el, value) {
+    // Technique extracted from Simplify Copilot's source code
+    const evtOpts = { bubbles: true };
+
+    // 1. Focus + click (activate the field)
     el.focus();
+    el.click();
 
-    // Method 1: execCommand insertText - most reliable for framework validation
-    el.value = '';
-    document.execCommand('insertText', false, value);
+    // 2. Set value using Simplify's W() technique
+    // Check both instance and prototype setters (handles React override)
+    const instanceSetter = Object.getOwnPropertyDescriptor(el, 'value')?.set;
+    const protoSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
 
-    // If execCommand didn't work, try native setter + full event chain
-    if (!el.value) {
-      const isTextarea = el.tagName === 'TEXTAREA';
-      const proto = isTextarea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-      if (setter) setter.call(el, value); else el.value = value;
-      el.dispatchEvent(new InputEvent('input', { bubbles: true, data: value, inputType: 'insertText' }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
+    if (instanceSetter && protoSetter && instanceSetter !== protoSetter) {
+      protoSetter.call(el, value);  // React has overridden instance, use prototype
+    } else if (instanceSetter) {
+      instanceSetter.call(el, value);
+    } else if (protoSetter) {
+      protoSetter.call(el, value);
     }
 
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    el.value = value;
+    el.setAttribute('value', value);  // Key: update DOM attribute for validation
+
+    // 3. Dispatch Simplify's exact event sequence
+    el.dispatchEvent(new KeyboardEvent('keydown', evtOpts));
+    el.dispatchEvent(new KeyboardEvent('keypress', evtOpts));
+    el.dispatchEvent(new CustomEvent('textInput', evtOpts));
+    el.dispatchEvent(new InputEvent('input', { ...evtOpts, data: value, inputType: 'insertText' }));
+    el.dispatchEvent(new KeyboardEvent('keyup', evtOpts));
+    el.dispatchEvent(new Event('change', evtOpts));
+    el.dispatchEvent(new FocusEvent('blur', evtOpts));
+
     log('SET', el.tagName, getFieldLabel(el) || el.name || el.id, '=', value.slice(0, 30));
   }
 
