@@ -84,50 +84,29 @@
     return '';
   }
 
-  async function setNativeValue(el, value) {
+  function setNativeValue(el, value) {
     const evtOpts = { bubbles: true };
     const label = getFieldLabel(el) || el.name || el.id;
 
-    // Focus + click
+    // 1. Focus + click
     el.focus();
     el.click();
 
-    // METHOD 1: Clipboard paste (most reliable for textareas + validation)
-    if (el.tagName === 'TEXTAREA' || !trySimplifySet(el, value)) {
-      try {
-        // Save current clipboard
-        const saved = await navigator.clipboard.readText().catch(() => '');
-        // Write our value to clipboard
-        await navigator.clipboard.writeText(value);
-        // Select all existing content
-        el.select();
-        // Paste from clipboard - browser treats this as real user input
-        document.execCommand('selectAll');
-        document.execCommand('insertText', false, value);
-
-        // If still empty, try paste command
-        if (!el.value) {
-          document.execCommand('paste');
-        }
-
-        // Restore clipboard
-        if (saved) await navigator.clipboard.writeText(saved).catch(() => {});
-
-        if (el.value === value) {
-          log('SET (clipboard)', el.tagName, label, '=', value.slice(0, 30));
-          el.dispatchEvent(new Event('change', evtOpts));
-          el.dispatchEvent(new FocusEvent('blur', evtOpts));
-          return;
-        }
-      } catch(e) {
-        log('Clipboard method failed:', e.message);
-      }
+    // 2. Try execCommand insertText (browser treats as real user input)
+    el.select();
+    document.execCommand('selectAll');
+    const inserted = document.execCommand('insertText', false, value);
+    if (inserted && el.value === value) {
+      log('SET (execCommand)', el.tagName, label, '=', value.slice(0, 30));
+      el.dispatchEvent(new Event('change', evtOpts));
+      el.dispatchEvent(new FocusEvent('blur', evtOpts));
+      return;
     }
 
-    // METHOD 2: Simplify Copilot technique (works for most inputs)
+    // 3. Simplify Copilot technique
     trySimplifySet(el, value);
 
-    // METHOD 3: Direct brute force
+    // 4. Direct value + attribute
     el.value = value;
     if (el.tagName === 'TEXTAREA') {
       el.textContent = value;
@@ -136,7 +115,7 @@
       el.setAttribute('value', value);
     }
 
-    // Event chain
+    // 5. Full event chain
     el.dispatchEvent(new KeyboardEvent('keydown', evtOpts));
     el.dispatchEvent(new KeyboardEvent('keypress', evtOpts));
     el.dispatchEvent(new CustomEvent('textInput', evtOpts));
@@ -386,7 +365,7 @@
     ];
   }
 
-  async function fillForm(profile) {
+  function fillForm(profile) {
     profile_cache = profile; // cache for dropdown handlers
     const ats = detectATS();
     let filled = [];
@@ -403,7 +382,7 @@
     for (const [selector, value] of specificFields) {
       const el = document.querySelector(selector);
       if (el && !el.value) {
-        await setNativeValue(el, value);
+        setNativeValue(el, value);
         filled.push(selector);
       }
     }
@@ -424,7 +403,7 @@
 
       const value = matchField(label, profile);
       if (value) {
-        await setNativeValue(input, value);
+        setNativeValue(input, value);
         filled.push(label);
       }
     }
@@ -482,10 +461,10 @@
       log('TEXTAREA:', ta.name || ta.id || '(anon)', 'allText:', allText.slice(0,80));
 
       if (allText.includes('cover letter') || allText.includes('why are you interested') || allText.includes('tell us about')) {
-        await setNativeValue(ta, profile.summary || 'N/A');
+        setNativeValue(ta, profile.summary || 'N/A');
         filled.push('textarea: summary');
       } else {
-        await setNativeValue(ta, 'N/A');
+        setNativeValue(ta, 'N/A');
         filled.push('textarea: N/A');
       }
     }
@@ -505,14 +484,14 @@
 
       if ((allText.includes('address') || allText.includes('street')) &&
           !allText.includes('email') && !allText.includes('ip-')) {
-        await setNativeValue(inp, profile.address || '1174 Summit Ave');
+        setNativeValue(inp, profile.address || '1174 Summit Ave');
         filled.push('address (fallback)');
         continue;
       }
 
       for (const attr of allAttrs) {
         const value = matchField(attr, profile);
-        if (value) { await setNativeValue(inp, value); filled.push(attr + ' (fallback)'); break; }
+        if (value) { setNativeValue(inp, value); filled.push(attr + ' (fallback)'); break; }
       }
     }
 
@@ -556,9 +535,9 @@
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action === 'fill') {
-      chrome.storage.local.get(['profile', 'resume_data'], async (data) => {
+      chrome.storage.local.get(["profile", "resume_data"], (data) => {
         if (data.profile) {
-          const result = await fillForm(data.profile);
+          const result = fillForm(data.profile);
 
           // Try attaching resume
           if (data.resume_data) {
