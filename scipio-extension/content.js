@@ -85,20 +85,39 @@
   }
 
   function setNativeValue(el, value) {
-    // Pick the right prototype setter for the element type
-    const isTextarea = el.tagName === 'TEXTAREA';
-    const proto = isTextarea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    // Focus the element first (required for many frameworks)
+    el.focus();
+    el.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
-    if (setter) {
-      setter.call(el, value);
-    } else {
-      el.value = value;
+    // Clear existing value
+    el.value = '';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Simulate real keystrokes - this is how LazyApply/SimpleApply bypass validation
+    for (const char of value) {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: char, code: 'Key' + char.toUpperCase(), bubbles: true }));
+      el.dispatchEvent(new KeyboardEvent('keypress', { key: char, code: 'Key' + char.toUpperCase(), bubbles: true }));
+
+      // Use native setter to append each character
+      const isTextarea = el.tagName === 'TEXTAREA';
+      const proto = isTextarea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (setter) {
+        setter.call(el, el.value + char);
+      } else {
+        el.value += char;
+      }
+
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, data: char, inputType: 'insertText' }));
+      el.dispatchEvent(new KeyboardEvent('keyup', { key: char, code: 'Key' + char.toUpperCase(), bubbles: true }));
     }
 
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    // Final events
     el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.dispatchEvent(new Event('blur', { bubbles: true }));
+    el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+
     log('SET', el.tagName, getFieldLabel(el) || el.name || el.id, '=', value.slice(0, 30));
   }
 
