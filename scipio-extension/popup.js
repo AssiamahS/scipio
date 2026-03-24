@@ -42,10 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Resume file picker
   document.getElementById('pResume').addEventListener('change', handleResumeUpload);
 
-  // Load saved data
+  // Load saved data - merge with defaults so new fields always exist
   chrome.storage.local.get(['profile', 'settings', 'resume_data'], (data) => {
-    const profile = data.profile || DEFAULT_PROFILE;
-    if (!data.profile) chrome.storage.local.set({ profile: DEFAULT_PROFILE });
+    const profile = { ...DEFAULT_PROFILE, ...(data.profile || {}) };
+    chrome.storage.local.set({ profile: profile });
     fillProfileForm(profile);
 
     const settings = data.settings || DEFAULT_SETTINGS;
