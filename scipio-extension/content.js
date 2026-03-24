@@ -487,20 +487,12 @@
       else if (rLabel.includes('not a protected veteran') || rLabel.includes('i am not a protected')) { radio.click(); filled.push('veteran: No'); }
     }
 
-    // 3c. Handle date fields
+    // 3c. Handle date fields - always use yyyy-MM-dd (ISO) format
+    const todayISO = new Date().toISOString().slice(0, 10); // 2026-03-24
+
     for (const inp of document.querySelectorAll('input[type="date"], input[placeholder*="m/d"], input[placeholder*="mm/dd"], input[placeholder*="date"]')) {
       if (inp.value) continue;
-      const today = new Date();
-      const m = today.getMonth() + 1;
-      const d = today.getDate();
-      const yy = String(today.getFullYear()).slice(-2);
-      const yyyy = today.getFullYear();
-      // Try ISO format first (for type="date"), then m/d/yy
-      if (inp.type === 'date') {
-        setNativeValue(inp, `${yyyy}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
-      } else {
-        setNativeValue(inp, `${m}/${d}/${yy}`);
-      }
+      setNativeValue(inp, todayISO);
       filled.push('date: today');
     }
 
@@ -509,38 +501,10 @@
       if (inp.value || inp.type === 'hidden' || inp.type === 'file' || inp.type === 'radio' || inp.type === 'checkbox') continue;
       const label = (getFieldLabel(inp) || '').toLowerCase();
       if (label.includes('date') && !label.includes('update') && !label.includes('posted')) {
-        const today = new Date();
-        const m = today.getMonth() + 1;
-        const d = today.getDate();
-        const yy = String(today.getFullYear()).slice(-2);
-        setNativeValue(inp, `${m}/${d}/${yy}`);
+        setNativeValue(inp, todayISO);
         filled.push('date: ' + label.slice(0, 30));
       }
     }
-
-    // Click today's date in any open calendar/date picker widget
-    setTimeout(() => {
-      const today = new Date().getDate();
-      // Common date picker patterns
-      const selectors = [
-        `td[data-day="${today}"]`, `td.today`, `td.current`,
-        `.datepicker td:not(.disabled):not(.old):not(.new)`,
-        `[aria-label*="today"]`, `[aria-current="date"]`,
-        `.ui-datepicker-today a`,
-      ];
-      for (const sel of selectors) {
-        const el = document.querySelector(sel);
-        if (el) { el.click(); log('DATE: clicked', sel); return; }
-      }
-      // Brute force: find a td or button with just today's date number
-      for (const el of document.querySelectorAll('td, button, a, span')) {
-        const text = el.textContent.trim();
-        if (text === String(today) && el.offsetParent !== null) {
-          const parent = el.closest('table, .calendar, .datepicker, [class*="calendar"], [class*="picker"]');
-          if (parent) { el.click(); log('DATE: clicked', text, 'in calendar'); return; }
-        }
-      }
-    }, 500);
 
     // 4. Handle select dropdowns
     document.querySelectorAll('select:not([readonly])').forEach(select => {
