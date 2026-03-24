@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Action buttons
-  document.getElementById('fillBtn').addEventListener('click', fillForm);
+  document.getElementById('fillBtn').addEventListener('click', () => fillForm(false));
+  document.getElementById('fillNextBtn').addEventListener('click', () => fillForm(true));
   document.getElementById('trackBtn').addEventListener('click', addToTracker);
   document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
@@ -105,7 +106,7 @@ async function detectPage() {
 }
 
 // ===== AUTO-FILL =====
-async function fillForm() {
+async function fillForm(clickNext) {
   const btn = document.getElementById('fillBtn');
   const resultEl = document.getElementById('result');
   btn.disabled = true;
@@ -113,7 +114,7 @@ async function fillForm() {
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.tabs.sendMessage(tab.id, { action: 'fill' }, (response) => {
+    chrome.tabs.sendMessage(tab.id, { action: 'fill', clickNext: !!clickNext }, (response) => {
       btn.disabled = false;
       btn.textContent = 'Auto-Fill Application';
 

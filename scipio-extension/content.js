@@ -563,6 +563,41 @@
     }
   }
 
+  function clickNextOrSubmit() {
+    // Try these selectors in order
+    const selectors = [
+      'button:not([disabled])',
+      'input[type="submit"]:not([disabled])',
+      'a[role="button"]',
+    ];
+    const keywords = ['next', 'submit', 'continue', 'apply', 'send', 'complete', 'finish', 'save'];
+
+    for (const selector of selectors) {
+      for (const el of document.querySelectorAll(selector)) {
+        const text = (el.textContent || el.value || '').toLowerCase().trim();
+        for (const kw of keywords) {
+          if (text === kw || text.startsWith(kw)) {
+            log('CLICKING:', el.tagName, text);
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => el.click(), 300);
+            return true;
+          }
+        }
+      }
+    }
+
+    // Fallback: find any visible button/link with these texts
+    for (const kw of keywords) {
+      const el = document.querySelector(
+        `button:has-text("${kw}"), a:has-text("${kw}"), input[value*="${kw}" i]`
+      );
+      if (el) { el.click(); return true; }
+    }
+
+    log('No Next/Submit button found');
+    return false;
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action === 'fill') {
       chrome.storage.local.get(["profile", "resume_data"], (data) => {
@@ -579,6 +614,12 @@
             }
           } else {
             result.missed.push('resume (upload one in Profile tab)');
+          }
+
+          // Click Next/Submit if requested
+          if (msg.clickNext) {
+            clickNextOrSubmit();
+            result.filled.push('clicked Next/Submit');
           }
 
           sendResponse(result);
