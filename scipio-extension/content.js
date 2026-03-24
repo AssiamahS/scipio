@@ -618,6 +618,40 @@
     }
   }
 
+  function clickCaptchaCheckbox() {
+    // reCAPTCHA v2 checkbox is inside an iframe
+    try {
+      const iframes = document.querySelectorAll('iframe[src*="recaptcha"], iframe[title*="reCAPTCHA"]');
+      for (const iframe of iframes) {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          const checkbox = iframeDoc.querySelector('.recaptcha-checkbox, #recaptcha-anchor');
+          if (checkbox) {
+            checkbox.click();
+            log('CAPTCHA: clicked reCAPTCHA checkbox');
+            return true;
+          }
+        } catch(e) {
+          // Cross-origin iframe - can't access directly, try clicking the iframe itself
+          log('CAPTCHA: cross-origin iframe, clicking iframe element');
+          iframe.click();
+          return true;
+        }
+      }
+
+      // Try clicking any visible captcha checkbox directly on page
+      const captchaDiv = document.querySelector('.g-recaptcha, [data-sitekey], .recaptcha');
+      if (captchaDiv) {
+        captchaDiv.click();
+        log('CAPTCHA: clicked g-recaptcha div');
+        return true;
+      }
+    } catch(e) {
+      log('CAPTCHA: error', e.message);
+    }
+    return false;
+  }
+
   function clickNextOrSubmit() {
     const selectors = ['button:not([disabled])', 'input[type="submit"]:not([disabled])', 'a[role="button"]', 'a.btn', 'a.button'];
     const keywords = ['next', 'submit', 'continue', 'apply', 'send', 'complete', 'finish', 'save'];
@@ -663,9 +697,16 @@
             result.missed.push('resume (upload one in Profile tab)');
           }
 
+          // Try clicking CAPTCHA if present
+          chrome.storage.local.set({ scipio_autofill_active: true });
+          if (clickCaptchaCheckbox()) {
+            result.filled.push('captcha clicked');
+          }
+
           // Click Next/Submit if requested
           if (msg.clickNext) {
-            clickNextOrSubmit();
+            // Wait a beat for captcha to process
+            setTimeout(() => clickNextOrSubmit(), 500);
             result.filled.push('clicked Next/Submit');
           }
 

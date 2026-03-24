@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scipio Auto-Apply",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Auto-fill job applications with your profile. Works on any site.",
   "permissions": ["activeTab", "storage", "scripting", "clipboardRead", "clipboardWrite"],
   "host_permissions": ["<all_urls>"],
@@ -18,7 +18,14 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "css": ["content.css"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://www.google.com/recaptcha/*", "*://www.recaptcha.net/*"],
+      "js": ["captcha.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "icons": {
