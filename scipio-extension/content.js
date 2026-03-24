@@ -403,52 +403,40 @@
       }
     });
 
-    // 5. Handle textareas
+    // 5. Handle textareas - fill ALL empty visible ones
     document.querySelectorAll('textarea').forEach(ta => {
       if (ta.value) return;
       try { if (ta.offsetParent === null) return; } catch(e) {}
-      log('TEXTAREA found:', ta.name || ta.id || '(no name/id)');
 
-      // Get label from all possible sources
-      const label = getFieldLabel(ta);
+      // Get ALL possible text around this textarea
+      const label = getFieldLabel(ta) || '';
       const placeholder = ta.placeholder || '';
-      const name = ta.name || '';
-      const id = ta.id || '';
-
-      // Also check surrounding text - previous siblings, parent text
       let surroundingText = '';
       try {
-        const prev = ta.previousElementSibling;
-        if (prev) surroundingText += ' ' + prev.textContent;
-        const parent = ta.parentElement;
-        if (parent) {
-          // Get text of parent but not the textarea itself
-          const clone = parent.cloneNode(true);
-          const textareas = clone.querySelectorAll('textarea');
-          textareas.forEach(t => t.remove());
-          surroundingText += ' ' + clone.textContent;
+        // Walk up to 3 previous siblings
+        let el = ta.previousElementSibling;
+        for (let i = 0; i < 3 && el; i++) {
+          surroundingText += ' ' + el.textContent;
+          el = el.previousElementSibling;
         }
+        // Parent and grandparent text
+        if (ta.parentElement) surroundingText += ' ' + ta.parentElement.textContent;
+        if (ta.parentElement?.parentElement) surroundingText += ' ' + ta.parentElement.parentElement.textContent;
       } catch(e) {}
 
-      const allText = [label, placeholder, name, id, surroundingText].join(' ').toLowerCase();
+      const allText = [label, placeholder, surroundingText].join(' ').toLowerCase();
+      log('TEXTAREA:', ta.name || ta.id || '(anon)', 'label:', label.slice(0,40), 'surrounding:', surroundingText.slice(0,60));
 
-      // N/A answers for common optional textareas
-      if (allText.includes('facility') || allText.includes('dates worked') ||
-          allText.includes('if yes') || allText.includes('if no') ||
-          allText.includes('n/a') || allText.includes('reply with')) {
-        setNativeValue(ta, 'N/A');
-        filled.push('textarea: N/A');
-      }
-      // Cover letter / additional info
-      else if (allText.includes('cover letter') || allText.includes('why are you interested') ||
-               allText.includes('tell us about') || allText.includes('additional information')) {
+      // Cover letter / tell us about yourself
+      if (allText.includes('cover letter') || allText.includes('why are you interested') ||
+          allText.includes('tell us about')) {
         setNativeValue(ta, profile.summary || 'N/A');
         filled.push('textarea: summary');
       }
-      // Any other required empty textarea - fill with N/A
-      else if (allText.includes('required') || allText.includes('*')) {
+      // Everything else on a job application page -> N/A
+      else {
         setNativeValue(ta, 'N/A');
-        filled.push('textarea: N/A (required fallback)');
+        filled.push('textarea: N/A');
       }
     });
 
