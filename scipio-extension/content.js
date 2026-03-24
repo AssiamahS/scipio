@@ -397,17 +397,51 @@
       }
     });
 
-    // 5. Handle textareas (facility/dates, cover letter, etc.)
+    // 5. Handle textareas
     document.querySelectorAll('textarea').forEach(ta => {
       if (ta.value) return;
       try { if (ta.offsetParent === null) return; } catch(e) {}
-      const label = getFieldLabel(ta);
-      const labelLow = (label || '').toLowerCase();
 
-      if (labelLow.includes('facility') || labelLow.includes('dates worked') ||
-          labelLow.includes('if yes') || labelLow.includes('if no')) {
+      // Get label from all possible sources
+      const label = getFieldLabel(ta);
+      const placeholder = ta.placeholder || '';
+      const name = ta.name || '';
+      const id = ta.id || '';
+
+      // Also check surrounding text - previous siblings, parent text
+      let surroundingText = '';
+      try {
+        const prev = ta.previousElementSibling;
+        if (prev) surroundingText += ' ' + prev.textContent;
+        const parent = ta.parentElement;
+        if (parent) {
+          // Get text of parent but not the textarea itself
+          const clone = parent.cloneNode(true);
+          const textareas = clone.querySelectorAll('textarea');
+          textareas.forEach(t => t.remove());
+          surroundingText += ' ' + clone.textContent;
+        }
+      } catch(e) {}
+
+      const allText = [label, placeholder, name, id, surroundingText].join(' ').toLowerCase();
+
+      // N/A answers for common optional textareas
+      if (allText.includes('facility') || allText.includes('dates worked') ||
+          allText.includes('if yes') || allText.includes('if no') ||
+          allText.includes('n/a') || allText.includes('reply with')) {
         setNativeValue(ta, 'N/A');
         filled.push('textarea: N/A');
+      }
+      // Cover letter / additional info
+      else if (allText.includes('cover letter') || allText.includes('why are you interested') ||
+               allText.includes('tell us about') || allText.includes('additional information')) {
+        setNativeValue(ta, profile.summary || 'N/A');
+        filled.push('textarea: summary');
+      }
+      // Any other required empty textarea - fill with N/A
+      else if (allText.includes('required') || allText.includes('*')) {
+        setNativeValue(ta, 'N/A');
+        filled.push('textarea: N/A (required fallback)');
       }
     });
 
