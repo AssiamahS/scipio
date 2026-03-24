@@ -465,78 +465,56 @@
     });
 
     // 5. Handle textareas - fill ALL empty visible ones
-    document.querySelectorAll('textarea').forEach(ta => {
-      if (ta.value) return;
-      try { if (ta.offsetParent === null) return; } catch(e) {}
+    for (const ta of document.querySelectorAll('textarea')) {
+      if (ta.value) continue;
+      try { if (ta.offsetParent === null) continue; } catch(e) {}
 
-      // Get ALL possible text around this textarea
-      const label = getFieldLabel(ta) || '';
-      const placeholder = ta.placeholder || '';
       let surroundingText = '';
       try {
-        // Walk up to 3 previous siblings
         let el = ta.previousElementSibling;
-        for (let i = 0; i < 3 && el; i++) {
-          surroundingText += ' ' + el.textContent;
-          el = el.previousElementSibling;
-        }
-        // Parent and grandparent text
+        for (let i = 0; i < 3 && el; i++) { surroundingText += ' ' + el.textContent; el = el.previousElementSibling; }
         if (ta.parentElement) surroundingText += ' ' + ta.parentElement.textContent;
         if (ta.parentElement?.parentElement) surroundingText += ' ' + ta.parentElement.parentElement.textContent;
       } catch(e) {}
 
-      const allText = [label, placeholder, surroundingText].join(' ').toLowerCase();
-      log('TEXTAREA:', ta.name || ta.id || '(anon)', 'label:', label.slice(0,40), 'surrounding:', surroundingText.slice(0,60));
+      const label = getFieldLabel(ta) || '';
+      const allText = [label, ta.placeholder, surroundingText].join(' ').toLowerCase();
+      log('TEXTAREA:', ta.name || ta.id || '(anon)', 'allText:', allText.slice(0,80));
 
-      // Cover letter / tell us about yourself
-      if (allText.includes('cover letter') || allText.includes('why are you interested') ||
-          allText.includes('tell us about')) {
+      if (allText.includes('cover letter') || allText.includes('why are you interested') || allText.includes('tell us about')) {
         await setNativeValue(ta, profile.summary || 'N/A');
         filled.push('textarea: summary');
-      }
-      // Everything else on a job application page -> N/A
-      else {
+      } else {
         await setNativeValue(ta, 'N/A');
         filled.push('textarea: N/A');
       }
-    });
+    }
 
-    // 6. Brute-force fallback for missed fields
-    document.querySelectorAll('input').forEach(inp => {
-      if (inp.value) return;
+    // 6. Brute-force fallback for missed input fields
+    for (const inp of document.querySelectorAll('input')) {
+      if (inp.value) continue;
       if (inp.type === 'hidden' || inp.type === 'file' || inp.type === 'submit' ||
-          inp.type === 'checkbox' || inp.type === 'radio' || inp.type === 'button') return;
-      try { if (inp.offsetParent === null) return; } catch(e) {}
+          inp.type === 'checkbox' || inp.type === 'radio' || inp.type === 'button') continue;
+      try { if (inp.offsetParent === null) continue; } catch(e) {}
 
-      // Collect ALL identifying info including visual label
       const label = getFieldLabel(inp);
-      const allAttrs = [
-        label, inp.name, inp.id, inp.placeholder,
+      const allAttrs = [label, inp.name, inp.id, inp.placeholder,
         inp.getAttribute('aria-label'), inp.getAttribute('autocomplete'),
-        inp.getAttribute('data-automation-id')
-      ].filter(Boolean);
-
+        inp.getAttribute('data-automation-id')].filter(Boolean);
       const allText = allAttrs.map(s => s.toLowerCase()).join(' ');
 
-      // Address field - explicitly target it
       if ((allText.includes('address') || allText.includes('street')) &&
           !allText.includes('email') && !allText.includes('ip-')) {
-        const addr = profile.address || '1174 Summit Ave';
-        await setNativeValue(inp, addr);
+        await setNativeValue(inp, profile.address || '1174 Summit Ave');
         filled.push('address (fallback)');
-        return;
+        continue;
       }
 
-      // Try matching any attr
       for (const attr of allAttrs) {
         const value = matchField(attr, profile);
-        if (value) {
-          await setNativeValue(inp, value);
-          filled.push(attr + ' (fallback)');
-          return;
-        }
+        if (value) { await setNativeValue(inp, value); filled.push(attr + ' (fallback)'); break; }
       }
-    });
+    }
 
     log('=== FILL DONE ===', 'Filled:', filled.length, 'Missed:', missed.length);
     log('Filled:', filled);
