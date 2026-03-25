@@ -320,8 +320,17 @@ tr:hover{background:#1e293b80}
 
 <script>
 // === CONFIG ===
-// API_BASE: set to your Cloudflare Worker URL after deploy, or '' for local-only mode
-const API_BASE = ''; // e.g. 'https://scipio-api.youraccount.workers.dev'
+// API_BASE auto-detects: on Cloudflare Pages, API is same-origin (/api/...)
+// On GitHub Pages or local, falls back to local-only mode
+const API_BASE = (function() {
+  const host = window.location.hostname;
+  // Cloudflare Pages: API is same-origin
+  if (host.includes('pages.dev') || host.includes('scipio')) return '';
+  // Local development
+  if (host === 'localhost' || host === '127.0.0.1') return '';
+  // GitHub Pages or other: no API (local-only mode)
+  return '';
+})();
 const STORAGE_KEY = 'scipio_jobtracker';
 const PROFILE_KEY = 'scipio_profile';
 const LOG_KEY = 'scipio_log';
@@ -450,11 +459,15 @@ function saveSettings(){
   toast('Profile updated');
 }
 
-// === API (Cloudflare Worker backend) ===
-function hasAPI(){return !!API_BASE;}
+// === API (Cloudflare Pages Functions backend) ===
+// API exists when hosted on Cloudflare Pages (pages.dev domain) or localhost
+function hasAPI(){
+  const h = window.location.hostname;
+  return h.includes('pages.dev') || h === 'localhost' || h === '127.0.0.1';
+}
 
 async function apiFetch(path, opts={}){
-  return fetch(API_BASE + path, {
+  return fetch(path, {
     ...opts,
     headers: {'Content-Type':'application/json', ...(opts.headers||{})},
   });
