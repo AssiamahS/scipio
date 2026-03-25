@@ -942,6 +942,17 @@
       const result = fillForm(data.profile);
       log('AUTO-RUN: filled', result.filled.length, 'fields');
 
+      // If nothing was filled, this is probably an optional page (attachments, etc.)
+      // Just click Next immediately
+      if (result.filled.length === 0) {
+        log('AUTO-RUN: optional page (0 fields filled), clicking Next...');
+        hasFilledThisPage = true;
+        isFilling = false;
+        hasClickedNext = true;
+        setTimeout(() => clickNextOrSubmit(), 500);
+        return;
+      }
+
       // Attach resume only if stored
       if (data.resume_data) {
         try {
@@ -959,13 +970,12 @@
       isFilling = false;
 
       // Check for blockers before clicking Next
-      // Give captcha extra time (3s) to process the checkbox click
       if (!hasClickedNext) {
         setTimeout(() => {
           const blockers = checkForBlockers();
           if (blockers.length > 0) {
             log('AUTO-RUN: STOPPED — blockers found:', blockers);
-            return; // Don't click Next, let user handle it
+            return;
           }
           hasClickedNext = true;
           log('AUTO-RUN: clicking Next...');

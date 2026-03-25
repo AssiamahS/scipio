@@ -1,29 +1,45 @@
 // Scipio - Background Service Worker
-// Auto-reload extension during development
+// Auto-reload extension during development using chrome.alarms (survives MV3 sleep)
 
 const DEV_MODE = true; // Set to false for production
-const RELOAD_INTERVAL = 2000; // Check every 2 seconds
 
 if (DEV_MODE) {
-  // Periodically check if content.js has changed by fetching it
   let lastHash = '';
 
   async function checkForChanges() {
     try {
-      const response = await fetch(chrome.runtime.getURL('content.js'));
-      const text = await response.text();
-      // Simple hash: length + first/last chars
-      const hash = text.length + '_' + text.slice(0, 100) + text.slice(-100);
+      // Fetch content.js + manifest.json from extension bundle
+      const [contentRes, manifestRes] = await Promise.all([
+        fetch(chrome.runtime.getURL('content.js')),
+        fetch(chrome.runtime.getURL('manifest.json'))
+      ]);
+      const content = await contentRes.text();
+      const manifest = await manifestRes.text();
+      const hash = content.length + '_' + manifest.length + '_' + content.slice(-200);
+
       if (lastHash && hash !== lastHash) {
-        console.log('[Scipio] File change detected, reloading extension...');
+        console.log('[Scipio] File change detected, reloading...');
         chrome.runtime.reload();
       }
       lastHash = hash;
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
   }
 
-  setInterval(checkForChanges, RELOAD_INTERVAL);
-  console.log('[Scipio] Dev mode: auto-reload enabled (checking every ' + RELOAD_INTERVAL + 'ms)');
+  // Use chrome.alarms to stay alive in MV3
+  chrome.alarms.create('scipio-dev-reload', { periodInMinutes: 0.05 }); // ~3 seconds
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'scipio-dev-reload') checkForChanges();
+  });
+
+  // Also check immediately on startup
+  checkForChanges();
+  console.log('[Scipio] Dev mode: auto-reload enabled via alarms API');
 }
+
+// Listen for version bump messages (from MCP or popup)
+chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'reload') {
+    chrome.runtime.reload();
+    sendResponse({ status: 'reloading' });
+  }
+});
