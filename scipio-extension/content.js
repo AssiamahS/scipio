@@ -579,8 +579,8 @@
       log('TEXTAREA:', ta.name || ta.id || '(anon)', 'allText:', allText.slice(0,80));
 
       if (allText.includes('cover letter') || allText.includes('why are you interested') || allText.includes('tell us about')) {
-        setNativeValue(ta, profile.summary || 'N/A');
-        filled.push('textarea: summary');
+        setNativeValue(ta, 'No cover letter');
+        filled.push('textarea: no cover letter');
       } else {
         setNativeValue(ta, 'N/A');
         filled.push('textarea: N/A');
@@ -952,19 +952,69 @@
         }
       }
 
+      // Set flag so captcha.js auto-clicks inside reCAPTCHA iframe
+      chrome.storage.local.set({ scipio_autofill_active: true });
       clickCaptchaCheckbox();
       hasFilledThisPage = true;
       isFilling = false;
 
-      // Auto-click Next after a delay (once only)
+      // Check for blockers before clicking Next
+      // Give captcha extra time (3s) to process the checkbox click
       if (!hasClickedNext) {
-        hasClickedNext = true;
         setTimeout(() => {
+          const blockers = checkForBlockers();
+          if (blockers.length > 0) {
+            log('AUTO-RUN: STOPPED — blockers found:', blockers);
+            return; // Don't click Next, let user handle it
+          }
+          hasClickedNext = true;
           log('AUTO-RUN: clicking Next...');
           clickNextOrSubmit();
-        }, 1500);
+        }, 3000);
       }
     });
+  }
+
+  function checkForBlockers() {
+    const blockers = [];
+
+    // CAPTCHA is NOT a blocker — we click through it (captcha.js handles the iframe click)
+    // Just log if one is present
+    const captcha = document.querySelector(
+      'iframe[src*="recaptcha"], iframe[title*="reCAPTCHA"], .g-recaptcha, [data-sitekey], .h-captcha, iframe[src*="hcaptcha"]'
+    );
+    if (captcha) {
+      log('AUTO-RUN: CAPTCHA detected, attempting click-through...');
+      // Set the flag so captcha.js auto-clicks inside the iframe
+      chrome.storage.local.set({ scipio_autofill_active: true });
+      clickCaptchaCheckbox();
+      // Don't add to blockers — let it proceed
+    }
+
+    // Check for required file inputs with no file chosen
+    for (const fileInput of document.querySelectorAll('input[type="file"]')) {
+      if (!fileInput.files || fileInput.files.length === 0) {
+        const label = (getFieldLabel(fileInput) || '').toLowerCase();
+        const nearby = (fileInput.parentElement?.textContent || '').toLowerCase();
+        // Only block on cover letter (resume gets auto-attached above)
+        if (label.includes('cover letter') ||
+            (nearby.includes('cover letter') && (nearby.includes('*') || nearby.includes('required')))) {
+          blockers.push('required file: cover letter');
+        }
+      }
+    }
+
+    // Check for validation error messages visible on page
+    const errorEls = document.querySelectorAll(
+      '.error, .field-error, [class*="error-message"], [class*="validation"], .text-danger, [role="alert"]'
+    );
+    for (const el of errorEls) {
+      if (el.offsetParent !== null && el.textContent.trim()) {
+        blockers.push('validation error: ' + el.textContent.trim().slice(0, 50));
+      }
+    }
+
+    return blockers;
   }
 
   // Kick off the pipeline

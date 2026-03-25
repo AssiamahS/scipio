@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Scipio Auto-Apply",
-  "version": "1.9.0",
+  "version": "1.9.2",
   "description": "Auto-fill job applications with your profile. Works on any site.",
-  "permissions": ["activeTab", "storage", "scripting", "clipboardRead", "clipboardWrite"],
+  "permissions": ["activeTab", "storage", "scripting", "clipboardRead", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
