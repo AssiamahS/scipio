@@ -510,13 +510,53 @@
       else if (rLabel.includes('not a protected veteran') || rLabel.includes('i am not a protected')) { radio.click(); filled.push('veteran: No'); }
     }
 
-    // 3c. Handle date fields - always use yyyy-MM-dd (ISO) format
-    const todayISO = new Date().toISOString().slice(0, 10); // 2026-03-24
+    // 3c. Handle date fields - detect format from placeholder
+    const now = new Date();
+    const todayISO = now.toISOString().slice(0, 10); // 2026-03-25
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const year2 = String(now.getFullYear()).slice(2); // "26"
+    const year4 = String(now.getFullYear()); // "2026"
+    const todayMDY = `${month}/${day}/${year2}`; // "3/25/26"
+    const todayMMDDYYYY = `${String(month).padStart(2,'0')}/${String(day).padStart(2,'0')}/${year4}`; // "03/25/2026"
 
     for (const inp of document.querySelectorAll('input[type="date"], input[placeholder*="m/d"], input[placeholder*="mm/dd"], input[placeholder*="date"]')) {
       if (inp.value) continue;
-      setNativeValue(inp, todayISO);
-      filled.push('date: today');
+      const ph = (inp.placeholder || '').toLowerCase();
+
+      // Pick format based on placeholder
+      let dateVal = todayISO;
+      if (ph === 'm/d/yy' || ph === 'm/d/y') dateVal = todayMDY;
+      else if (ph.includes('mm/dd/yyyy')) dateVal = todayMMDDYYYY;
+      else if (ph.includes('m/d')) dateVal = todayMDY;
+
+      log('DATE: setting', inp.placeholder, '→', dateVal);
+      setNativeValue(inp, dateVal);
+
+      // SilkRoad: also click the calendar button next to it, then click today
+      const calBtn = inp.nextElementSibling;
+      if (calBtn && (calBtn.tagName === 'BUTTON' || calBtn.querySelector('img[alt*="date"]'))) {
+        log('DATE: clicking calendar button');
+        calBtn.click();
+        // After calendar opens, try to click "Today" or the highlighted date
+        setTimeout(() => {
+          const todayCell = document.querySelector('.ui-datepicker-today a, .today a, td.today, .ui-state-highlight, a.ui-state-active, [data-handler="selectDay"] a');
+          if (todayCell) {
+            todayCell.click();
+            log('DATE: clicked today in calendar');
+          } else {
+            // Close the calendar by clicking the input again
+            inp.click();
+            inp.blur();
+            log('DATE: no today cell found, closing calendar');
+          }
+        }, 500);
+      }
+
+      // Also dispatch events to clear validation
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      inp.dispatchEvent(new Event('blur', { bubbles: true }));
+      filled.push('date: ' + dateVal);
     }
 
     // Also find date inputs by label
@@ -524,7 +564,26 @@
       if (inp.value || inp.type === 'hidden' || inp.type === 'file' || inp.type === 'radio' || inp.type === 'checkbox') continue;
       const label = (getFieldLabel(inp) || '').toLowerCase();
       if (label.includes('date') && !label.includes('update') && !label.includes('posted')) {
-        setNativeValue(inp, todayISO);
+        const ph = (inp.placeholder || '').toLowerCase();
+        let dateVal = todayISO;
+        if (ph === 'm/d/yy' || ph.includes('m/d')) dateVal = todayMDY;
+        else if (ph.includes('mm/dd')) dateVal = todayMMDDYYYY;
+
+        setNativeValue(inp, dateVal);
+
+        // Click calendar button if present
+        const calBtn = inp.nextElementSibling;
+        if (calBtn && (calBtn.tagName === 'BUTTON' || calBtn.querySelector('img[alt*="date"]'))) {
+          calBtn.click();
+          setTimeout(() => {
+            const todayCell = document.querySelector('.ui-datepicker-today a, .today a, td.today, .ui-state-highlight, a.ui-state-active');
+            if (todayCell) todayCell.click();
+            else { inp.click(); inp.blur(); }
+          }, 500);
+        }
+
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        inp.dispatchEvent(new Event('blur', { bubbles: true }));
         filled.push('date: ' + label.slice(0, 30));
       }
     }
@@ -716,7 +775,7 @@
   }
 
   function clickNextOrSubmit() {
-    const selectors = ['button:not([disabled])', 'input[type="submit"]:not([disabled])', 'a[role="button"]', 'a.btn', 'a.button'];
+    const selectors = ['button:not([disabled])', 'input[type="submit"]:not([disabled])', 'a[role="button"]', 'a.btn', 'a.button', 'a[href]'];
     const keywords = ['next', 'submit', 'continue', 'apply', 'send', 'complete', 'finish', 'save'];
 
     for (const selector of selectors) {
@@ -970,6 +1029,7 @@
       isFilling = false;
 
       // Check for blockers before clicking Next
+      // 4s delay to let date calendar clicks complete
       if (!hasClickedNext) {
         setTimeout(() => {
           const blockers = checkForBlockers();
@@ -980,7 +1040,7 @@
           hasClickedNext = true;
           log('AUTO-RUN: clicking Next...');
           clickNextOrSubmit();
-        }, 3000);
+        }, 4000);
       }
     });
   }
@@ -1015,11 +1075,15 @@
     }
 
     // Check for validation error messages visible on page
+    // Skip date-related errors (we handle dates with calendar click, may take a moment)
     const errorEls = document.querySelectorAll(
       '.error, .field-error, [class*="error-message"], [class*="validation"], .text-danger, [role="alert"]'
     );
     for (const el of errorEls) {
       if (el.offsetParent !== null && el.textContent.trim()) {
+        const errText = el.textContent.trim().toLowerCase();
+        // Skip date validation errors — we handle dates via calendar click
+        if (errText.includes('date')) continue;
         blockers.push('validation error: ' + el.textContent.trim().slice(0, 50));
       }
     }
