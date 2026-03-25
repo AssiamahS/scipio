@@ -83,7 +83,7 @@ tr:hover{background:#1e293b80}
 .setup-box{background:#1e293b;border-radius:16px;padding:40px;max-width:500px;width:90%;border:1px solid #334155}
 .setup-box h2{margin-bottom:8px;color:#f8fafc}
 .setup-box p{color:#94a3b8;margin-bottom:20px;font-size:14px;line-height:1.5}
-.setup-box input{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:12px;border-radius:8px;font-size:14px;margin-bottom:12px;font-family:monospace}
+.setup-box input{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:10px 12px;border-radius:8px;font-size:14px;margin-bottom:8px}
 .setup-box a{color:#38bdf8}
 .setup-box .btn-save{width:100%;padding:12px;font-size:16px}
 .setup-box .skip{color:#64748b;font-size:13px;margin-top:12px;cursor:pointer}
@@ -98,21 +98,72 @@ tr:hover{background:#1e293b80}
 </head>
 <body>
 
-<!-- Setup screen (shown if no token) -->
+<!-- Setup screen - Profile wizard for new users -->
 <div class="container" id="setupScreen" style="display:none">
   <div class="setup-screen">
-    <div class="setup-box">
+    <div class="setup-box" style="max-width:560px">
       <h2><span style="color:#38bdf8">S</span>cipio</h2>
-      <p>To sync your job data across devices, paste a GitHub Personal Access Token with <strong>repo</strong> scope.</p>
-      <p style="font-size:12px">
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=scipio-tracker" target="_blank" rel="noopener">
-          Click here to create a token on GitHub
-        </a><br>
-        Check "repo" scope, generate, and paste below.
-      </p>
-      <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-      <button class="btn-save" onclick="saveToken()">Connect to GitHub</button>
-      <div class="skip" onclick="skipSetup()">Skip - use local storage only</div>
+      <p>Set up your profile to auto-fill job applications across all your devices.</p>
+
+      <!-- Step 1: Basic info -->
+      <div id="wizStep1">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:12px;color:#64748b">First Name *</label><input type="text" id="wFirstName" placeholder="Sylvester"></div>
+          <div><label style="font-size:12px;color:#64748b">Last Name *</label><input type="text" id="wLastName" placeholder="Assiamah"></div>
+        </div>
+        <label style="font-size:12px;color:#64748b">Email *</label>
+        <input type="email" id="wEmail" placeholder="you@email.com">
+        <label style="font-size:12px;color:#64748b">Phone</label>
+        <input type="tel" id="wPhone" placeholder="908-839-0555">
+        <button class="btn-save" style="width:100%;margin-top:12px" onclick="wizNext(2)">Next</button>
+      </div>
+
+      <!-- Step 2: Location + work -->
+      <div id="wizStep2" style="display:none">
+        <label style="font-size:12px;color:#64748b">Street Address</label>
+        <input type="text" id="wAddress" placeholder="1174 Summit Ave">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
+          <div><label style="font-size:12px;color:#64748b">City</label><input type="text" id="wCity" placeholder="Jersey City"></div>
+          <div><label style="font-size:12px;color:#64748b">State</label><input type="text" id="wState" placeholder="NJ" maxlength="2"></div>
+          <div><label style="font-size:12px;color:#64748b">Zip</label><input type="text" id="wZip" placeholder="07306"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:12px;color:#64748b">Current Title</label><input type="text" id="wTitle" placeholder="IT Manager"></div>
+          <div><label style="font-size:12px;color:#64748b">Current Company</label><input type="text" id="wCompany" placeholder="Acme Health"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:12px;color:#64748b">Years Experience</label><input type="number" id="wYears" placeholder="7"></div>
+          <div><label style="font-size:12px;color:#64748b">Desired Salary</label><input type="text" id="wSalary" placeholder="120000"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-cancel" style="flex:1" onclick="wizBack(1)">Back</button>
+          <button class="btn-save" style="flex:2" onclick="wizNext(3)">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Links + target -->
+      <div id="wizStep3" style="display:none">
+        <label style="font-size:12px;color:#64748b">LinkedIn URL</label>
+        <input type="url" id="wLinkedin" placeholder="https://linkedin.com/in/yourname">
+        <label style="font-size:12px;color:#64748b">GitHub / Portfolio URL</label>
+        <input type="url" id="wGithub" placeholder="https://github.com/yourname">
+        <label style="font-size:12px;color:#64748b">Target Role</label>
+        <input type="text" id="wTargetRole" placeholder="IT Manager / Healthcare Tech">
+        <label style="font-size:12px;color:#64748b">Target Location</label>
+        <input type="text" id="wTargetLocation" placeholder="Remote">
+        <label style="font-size:12px;color:#64748b">Minimum Salary</label>
+        <input type="text" id="wMinSalary" placeholder="$100,000+">
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-cancel" style="flex:1" onclick="wizBack(2)">Back</button>
+          <button class="btn-save" style="flex:2" onclick="finishSetup()">Start Tracking</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:center;gap:6px;margin-top:16px">
+        <div id="wizDot1" style="width:8px;height:8px;border-radius:50%;background:#38bdf8"></div>
+        <div id="wizDot2" style="width:8px;height:8px;border-radius:50%;background:#334155"></div>
+        <div id="wizDot3" style="width:8px;height:8px;border-radius:50%;background:#334155"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -125,16 +176,16 @@ tr:hover{background:#1e293b80}
       <button class="btn-sm" onclick="exportData()" title="Download JSON backup">Export</button>
       <button class="btn-sm" onclick="document.getElementById('importFile').click()" title="Import JSON backup">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-      <button class="btn-sm" onclick="showSettings()" title="Token settings">Settings</button>
+      <button class="btn-sm" onclick="showSettings()" title="Edit profile & settings">Profile</button>
       <button class="btn-add" onclick="openAdd()">+ Add Job</button>
     </div>
   </header>
 
-  <div class="target-info" style="margin-bottom:20px">
-    <div>Target: <span>IT Manager / Healthcare Tech</span></div>
-    <div>Location: <span>Remote</span></div>
-    <div>Min Salary: <span>$100,000+</span></div>
-    <div>Profile: <span>Sylvester Assiamah</span></div>
+  <div class="target-info" style="margin-bottom:20px" id="targetBar">
+    <div>Target: <span id="tTarget">--</span></div>
+    <div>Location: <span id="tLocation">--</span></div>
+    <div>Min Salary: <span id="tSalary">--</span></div>
+    <div>Profile: <span id="tProfile">--</span></div>
   </div>
 
   <div class="stats-row">
@@ -228,21 +279,31 @@ tr:hover{background:#1e293b80}
   </div>
 </div>
 
-<!-- Settings Modal -->
+<!-- Settings Modal - Edit Profile -->
 <div class="modal-overlay" id="settingsModal">
-  <div class="modal">
-    <h3>Settings</h3>
-    <label>GitHub Token</label>
-    <input type="password" id="settingsToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-    <p style="font-size:12px;color:#64748b;margin-top:6px">
-      <a href="https://github.com/settings/tokens/new?scopes=repo&description=scipio-tracker" target="_blank" rel="noopener" style="color:#38bdf8">Create token</a> with repo scope.
-      Token is stored in your browser only.
-    </p>
-    <label>Sync Mode</label>
-    <select id="settingsMode">
-      <option value="github">GitHub (sync across devices)</option>
-      <option value="local">Local only (this browser)</option>
-    </select>
+  <div class="modal" style="max-height:90vh;overflow-y:auto">
+    <h3>Edit Profile</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>First Name</label><input type="text" id="sFirstName"></div>
+      <div><label>Last Name</label><input type="text" id="sLastName"></div>
+    </div>
+    <label>Email</label><input type="email" id="sEmail">
+    <label>Phone</label><input type="tel" id="sPhone">
+    <label>Address</label><input type="text" id="sAddress">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
+      <div><label>City</label><input type="text" id="sCity"></div>
+      <div><label>State</label><input type="text" id="sState"></div>
+      <div><label>Zip</label><input type="text" id="sZip"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>Title</label><input type="text" id="sTitle"></div>
+      <div><label>Company</label><input type="text" id="sCompany"></div>
+    </div>
+    <label>LinkedIn</label><input type="url" id="sLinkedin">
+    <label>GitHub</label><input type="url" id="sGithub">
+    <label>Target Role</label><input type="text" id="sTargetRole">
+    <label>Target Location</label><input type="text" id="sTargetLocation">
+    <label>Min Salary</label><input type="text" id="sMinSalary">
     <div class="modal-actions">
       <button class="btn-cancel" onclick="document.getElementById('settingsModal').classList.remove('active')">Cancel</button>
       <button class="btn-save" onclick="saveSettings()">Save</button>
@@ -259,16 +320,14 @@ tr:hover{background:#1e293b80}
 
 <script>
 // === CONFIG ===
-const REPO_OWNER = 'AssiamahS';
-const REPO_NAME = 'scipio';
-const FILE_PATH = 'jobs.json';
+// API_BASE: set to your Cloudflare Worker URL after deploy, or '' for local-only mode
+const API_BASE = ''; // e.g. 'https://scipio-api.youraccount.workers.dev'
 const STORAGE_KEY = 'scipio_jobtracker';
-const TOKEN_KEY = 'scipio_gh_token';
-const MODE_KEY = 'scipio_mode';
+const PROFILE_KEY = 'scipio_profile';
 const LOG_KEY = 'scipio_log';
 
 let db = {jobs:[], next_id:1};
-let fileSha = null; // needed for GitHub API updates
+let profile = null;
 let saving = false;
 
 const STATUSES = ['wishlist','applied','screening','interview','offer','rejected','withdrawn','accepted'];
@@ -279,97 +338,143 @@ const STATUS_COLORS = {
 
 // === INIT ===
 function init(){
-  const token = localStorage.getItem(TOKEN_KEY);
-  const mode = localStorage.getItem(MODE_KEY) || 'github';
+  profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
 
-  if(!token && mode !== 'local'){
+  if(!profile){
+    // New user — show profile wizard
     document.getElementById('setupScreen').style.display='block';
     document.getElementById('mainApp').style.display='none';
   } else {
     document.getElementById('setupScreen').style.display='none';
     document.getElementById('mainApp').style.display='block';
+    updateTargetBar();
     loadData();
   }
 }
 
-function saveToken(){
-  const token = document.getElementById('tokenInput').value.trim();
-  if(!token){alert('Paste your GitHub token');return;}
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(MODE_KEY, 'github');
+// === PROFILE WIZARD ===
+function wizNext(step){
+  if(step===2){
+    const fn=document.getElementById('wFirstName').value.trim();
+    const ln=document.getElementById('wLastName').value.trim();
+    const em=document.getElementById('wEmail').value.trim();
+    if(!fn||!ln||!em){toast('Name and email are required');return;}
+  }
+  for(let i=1;i<=3;i++){
+    document.getElementById('wizStep'+i).style.display=i===step?'block':'none';
+    document.getElementById('wizDot'+i).style.background=i===step?'#38bdf8':i<step?'#34d399':'#334155';
+  }
+}
+function wizBack(step){wizNext(step);}
+
+function finishSetup(){
+  profile = {
+    first_name: document.getElementById('wFirstName').value.trim(),
+    last_name: document.getElementById('wLastName').value.trim(),
+    email: document.getElementById('wEmail').value.trim(),
+    phone: document.getElementById('wPhone').value.trim(),
+    address: document.getElementById('wAddress').value.trim(),
+    city: document.getElementById('wCity').value.trim(),
+    state: document.getElementById('wState').value.trim().toUpperCase(),
+    zip: document.getElementById('wZip').value.trim(),
+    country: 'United States',
+    current_title: document.getElementById('wTitle').value.trim(),
+    current_company: document.getElementById('wCompany').value.trim(),
+    years_experience: document.getElementById('wYears').value.trim(),
+    desired_salary: document.getElementById('wSalary').value.trim(),
+    linkedin: document.getElementById('wLinkedin').value.trim(),
+    github: document.getElementById('wGithub').value.trim(),
+    target_role: document.getElementById('wTargetRole').value.trim() || 'IT Manager',
+    target_location: document.getElementById('wTargetLocation').value.trim() || 'Remote',
+    min_salary: document.getElementById('wMinSalary').value.trim() || '$100,000+',
+    created: new Date().toISOString(),
+  };
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   document.getElementById('setupScreen').style.display='none';
   document.getElementById('mainApp').style.display='block';
+  updateTargetBar();
   loadData();
+  toast('Profile created! You\'re all set.');
+  // Sync profile to backend if available
+  syncProfile();
 }
 
-function skipSetup(){
-  localStorage.setItem(MODE_KEY, 'local');
-  document.getElementById('setupScreen').style.display='none';
-  document.getElementById('mainApp').style.display='block';
-  loadData();
+function updateTargetBar(){
+  if(!profile)return;
+  document.getElementById('tTarget').textContent=profile.target_role||'--';
+  document.getElementById('tLocation').textContent=profile.target_location||'--';
+  document.getElementById('tSalary').textContent=profile.min_salary||'--';
+  document.getElementById('tProfile').textContent=`${profile.first_name} ${profile.last_name}`;
 }
 
 function showSettings(){
-  document.getElementById('settingsToken').value = localStorage.getItem(TOKEN_KEY)||'';
-  document.getElementById('settingsMode').value = localStorage.getItem(MODE_KEY)||'github';
+  if(!profile)return;
+  document.getElementById('sFirstName').value=profile.first_name||'';
+  document.getElementById('sLastName').value=profile.last_name||'';
+  document.getElementById('sEmail').value=profile.email||'';
+  document.getElementById('sPhone').value=profile.phone||'';
+  document.getElementById('sAddress').value=profile.address||'';
+  document.getElementById('sCity').value=profile.city||'';
+  document.getElementById('sState').value=profile.state||'';
+  document.getElementById('sZip').value=profile.zip||'';
+  document.getElementById('sTitle').value=profile.current_title||'';
+  document.getElementById('sCompany').value=profile.current_company||'';
+  document.getElementById('sLinkedin').value=profile.linkedin||'';
+  document.getElementById('sGithub').value=profile.github||'';
+  document.getElementById('sTargetRole').value=profile.target_role||'';
+  document.getElementById('sTargetLocation').value=profile.target_location||'';
+  document.getElementById('sMinSalary').value=profile.min_salary||'';
   document.getElementById('settingsModal').classList.add('active');
 }
 
 function saveSettings(){
-  const token = document.getElementById('settingsToken').value.trim();
-  const mode = document.getElementById('settingsMode').value;
-  if(token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-  localStorage.setItem(MODE_KEY, mode);
+  profile.first_name=document.getElementById('sFirstName').value.trim();
+  profile.last_name=document.getElementById('sLastName').value.trim();
+  profile.email=document.getElementById('sEmail').value.trim();
+  profile.phone=document.getElementById('sPhone').value.trim();
+  profile.address=document.getElementById('sAddress').value.trim();
+  profile.city=document.getElementById('sCity').value.trim();
+  profile.state=document.getElementById('sState').value.trim();
+  profile.zip=document.getElementById('sZip').value.trim();
+  profile.current_title=document.getElementById('sTitle').value.trim();
+  profile.current_company=document.getElementById('sCompany').value.trim();
+  profile.linkedin=document.getElementById('sLinkedin').value.trim();
+  profile.github=document.getElementById('sGithub').value.trim();
+  profile.target_role=document.getElementById('sTargetRole').value.trim();
+  profile.target_location=document.getElementById('sTargetLocation').value.trim();
+  profile.min_salary=document.getElementById('sMinSalary').value.trim();
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   document.getElementById('settingsModal').classList.remove('active');
-  loadData();
-  toast('Settings saved');
+  updateTargetBar();
+  syncProfile();
+  toast('Profile updated');
 }
 
-// === GITHUB API ===
-function getToken(){return localStorage.getItem(TOKEN_KEY);}
-function isGithubMode(){return localStorage.getItem(MODE_KEY)==='github' && !!getToken();}
+// === API (Cloudflare Worker backend) ===
+function hasAPI(){return !!API_BASE;}
 
-async function ghFetch(url, opts={}){
-  const token = getToken();
-  return fetch(url, {
+async function apiFetch(path, opts={}){
+  return fetch(API_BASE + path, {
     ...opts,
-    headers: {
-      'Authorization': `token ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      ...(opts.headers||{})
-    }
+    headers: {'Content-Type':'application/json', ...(opts.headers||{})},
   });
 }
 
-async function loadFromGitHub(){
+async function loadFromAPI(){
   setSyncBadge('saving','Loading...');
   try{
-    const r = await ghFetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`);
+    const r = await apiFetch('/api/jobs');
     if(r.ok){
       const data = await r.json();
-      fileSha = data.sha;
-      const content = atob(data.content.replace(/\n/g,''));
-      db = JSON.parse(content);
-      // Also cache locally
+      db = {jobs: data.jobs||[], next_id: data.next_id||1};
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
       setSyncBadge('ok','Synced');
-    } else if(r.status === 404){
-      // File doesn't exist yet, use seed
-      db = getSeed();
-      await saveToGitHub('Initial seed data');
-      setSyncBadge('ok','Synced');
-    } else if(r.status === 401){
-      setSyncBadge('error','Bad token');
-      toast('GitHub token invalid - check Settings');
-      loadFromLocal();
     } else {
-      throw new Error(`GitHub API ${r.status}`);
+      throw new Error(`API ${r.status}`);
     }
   } catch(e){
-    console.error('GitHub load failed:', e);
-    setSyncBadge('error','Sync failed');
+    console.error('API load failed:', e);
+    setSyncBadge('error','Offline');
     loadFromLocal();
   }
   render();
@@ -377,52 +482,45 @@ async function loadFromGitHub(){
   updateFooter();
 }
 
-async function saveToGitHub(message){
-  if(saving) return;
+async function saveToAPI(message){
+  if(saving||!hasAPI()) return;
   saving = true;
   setSyncBadge('saving','Saving...');
   try{
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2))));
-    const body = {
-      message: message || `Update jobs - ${new Date().toISOString().slice(0,16)}`,
-      content,
-      ...(fileSha ? {sha: fileSha} : {})
-    };
-    const r = await ghFetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
-      {method: 'PUT', body: JSON.stringify(body)}
-    );
+    // Full overwrite via the jobs endpoint
+    // For simplicity, re-upload the whole jobs list
+    const r = await apiFetch('/api/jobs', {
+      method: 'POST',
+      body: JSON.stringify({_bulk: true, jobs: db.jobs, next_id: db.next_id}),
+    });
     if(r.ok){
-      const data = await r.json();
-      fileSha = data.content.sha;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
       setSyncBadge('ok','Synced');
     } else {
-      const err = await r.json();
-      // SHA mismatch = someone else updated, reload
-      if(r.status === 409 || (err.message && err.message.includes('sha'))){
-        toast('Conflict detected, reloading...');
-        await loadFromGitHub();
-      } else {
-        throw new Error(err.message || `HTTP ${r.status}`);
-      }
+      throw new Error(`API save failed: ${r.status}`);
     }
   } catch(e){
-    console.error('GitHub save failed:', e);
+    console.error('Save failed:', e);
     setSyncBadge('error','Save failed');
-    // Still save locally as fallback
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   }
   saving = false;
+}
+
+async function syncProfile(){
+  if(!hasAPI()||!profile) return;
+  try{
+    await apiFetch('/api/profile/default', {method:'PUT', body:JSON.stringify(profile)});
+  } catch(e){ console.error('Profile sync failed:', e); }
 }
 
 // === LOCAL STORAGE ===
 function loadFromLocal(){
   const stored = localStorage.getItem(STORAGE_KEY);
   if(stored){
-    try{db=JSON.parse(stored);}catch(e){db=getSeed();}
+    try{db=JSON.parse(stored);}catch(e){db={jobs:[],next_id:1};}
   } else {
-    db = getSeed();
+    db = {jobs:[], next_id:1};
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   }
 }
@@ -433,11 +531,11 @@ function saveToLocal(){
 
 // === UNIFIED LOAD/SAVE ===
 async function loadData(){
-  if(isGithubMode()){
-    await loadFromGitHub();
+  if(hasAPI()){
+    await loadFromAPI();
   } else {
     loadFromLocal();
-    setSyncBadge('offline','Local only');
+    setSyncBadge('offline','Local');
     render();
     renderLog();
     updateFooter();
@@ -445,26 +543,15 @@ async function loadData(){
 }
 
 async function persistData(message){
-  if(isGithubMode()){
-    saveToLocal(); // immediate local cache
-    await saveToGitHub(message);
-  } else {
-    saveToLocal();
+  saveToLocal(); // always save locally first
+  if(hasAPI()){
+    await saveToAPI(message);
   }
 }
 
 // === SEED DATA ===
 function getSeed(){
-  return {"jobs":[
-    {"id":1,"company":"Optum / UnitedHealth","role":"IT Manager - Remote","url":"https://www.indeed.com/q-optum-l-remote-jobs.html","salary":"100k-170k","notes":"Major healthcare IT employer, check careers page","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":2,"company":"Ascension Health","role":"IT Operations Manager - Remote","url":"https://jobs.ascension.org/us/en/remote","salary":"106k-146k","notes":"Large health system, active remote hiring","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":3,"company":"Mayo Clinic","role":"IT Manager - Remote","url":"https://jobs.mayoclinic.org/Remote","salary":"100k-165k","notes":"Top hospital system, remote tech roles available","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":4,"company":"Humana","role":"Healthcare IT Manager - Remote","url":"https://www.linkedin.com/jobs/remote-healthcare-management-jobs","salary":"110k-150k","notes":"Insurance/health tech, large remote workforce","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":5,"company":"Included Health","role":"IT Operations Manager - Remote","url":"https://includedhealth.com/careers/","salary":"115k-160k","notes":"Digital health company, fully remote culture","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":6,"company":"CertifyOS","role":"Operations Analyst - Remote","url":"https://careerstn.com/certifyos-hiring-2026-operations-analyst-100-remote-wfh/","salary":"100k-130k","notes":"Health tech startup, 100% remote","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":7,"company":"Epic Systems","role":"IT Project Manager - Remote","url":"https://careers.epic.com/jobs/","salary":"110k-150k","notes":"Your Epic Hyperspace experience is a differentiator","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]},
-    {"id":8,"company":"Cigna Group","role":"IT Manager Healthcare - Remote","url":"https://www.glassdoor.com/Job/remote-healthcare-operations-jobs-SRCH_IL.0,6_IS11047_KO7,28.htm","salary":"110k-160k","notes":"Major health insurer, strong IT department","status":"wishlist","applied_date":"2026-03-24","updated_date":"2026-03-24","history":[{"status":"wishlist","date":"2026-03-24 12:00"}]}
-  ],"next_id":9};
+  return {"jobs":[], "next_id":1};
 }
 
 // === UI HELPERS ===
@@ -475,7 +562,7 @@ function setSyncBadge(type, text){
 }
 
 function updateFooter(){
-  document.getElementById('footerMode').textContent = isGithubMode() ? 'Synced to GitHub' : 'Local storage only';
+  document.getElementById('footerMode').textContent = hasAPI() ? 'Synced' : 'Local storage';
 }
 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
