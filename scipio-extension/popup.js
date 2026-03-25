@@ -41,6 +41,35 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
 
+  // Auto-Run toggle
+  const autoRunToggle = document.getElementById('autoRunToggle');
+  const autoRunTrack = document.getElementById('autoRunTrack');
+  const autoRunDot = document.getElementById('autoRunDot');
+
+  chrome.storage.local.get(['scipio_autorun'], (data) => {
+    const isOn = !!data.scipio_autorun;
+    autoRunToggle.checked = isOn;
+    updateToggleUI(isOn);
+  });
+
+  autoRunToggle.addEventListener('change', () => {
+    const isOn = autoRunToggle.checked;
+    chrome.storage.local.set({ scipio_autorun: isOn });
+    updateToggleUI(isOn);
+  });
+
+  function updateToggleUI(isOn) {
+    if (isOn) {
+      autoRunTrack.style.background = '#38bdf8';
+      autoRunDot.style.background = '#0f172a';
+      autoRunDot.style.left = '22px';
+    } else {
+      autoRunTrack.style.background = '#334155';
+      autoRunDot.style.background = '#64748b';
+      autoRunDot.style.left = '2px';
+    }
+  }
+
   // Resume file picker
   document.getElementById('pResume').addEventListener('change', handleResumeUpload);
 

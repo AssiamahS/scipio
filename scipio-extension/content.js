@@ -267,6 +267,28 @@
       if (match) { selectOption(select, match.value); return true; }
     }
 
+    // Referral source / "How did you hear" dropdown
+    if (labelLower.includes('how did you hear') || labelLower.includes('source') ||
+        labelLower.includes('referral') || labelLower.includes('where did you find') ||
+        labelLower.includes('how did you learn')) {
+      // Prefer "Online Job Board" or the specific source from the URL
+      const url = window.location.href.toLowerCase();
+      let preferred = [];
+      if (url.includes('ziprecruiter')) preferred = ['ziprecruiter', 'online job board'];
+      else if (url.includes('indeed')) preferred = ['indeed', 'online job board'];
+      else if (url.includes('linkedin')) preferred = ['linkedin', 'online job board'];
+      else if (url.includes('glassdoor')) preferred = ['glassdoor', 'online job board'];
+      else preferred = ['online job board', 'company website', 'other'];
+
+      for (const pref of preferred) {
+        const match = options.find(o => o.text.toLowerCase().includes(pref));
+        if (match) { selectOption(select, match.value); return true; }
+      }
+      // Last resort: pick "Other"
+      const other = options.find(o => o.text.toLowerCase().includes('other'));
+      if (other) { selectOption(select, other.value); return true; }
+    }
+
     // EEO - decline
     for (const pattern of DECLINE_PATTERNS) {
       if (labelLower.includes(pattern)) {
@@ -364,6 +386,7 @@
       ['input[data-automation-id="legalNameSection_lastName"]', profile.last_name],
     ];
   }
+
 
   function fillForm(profile) {
     profile_cache = profile; // cache for dropdown handlers
@@ -516,6 +539,27 @@
         filled.push(`select: ${label.slice(0, 40)}`);
       }
     });
+
+    // 4b. Handle checkboxes - Terms, SMS consent, privacy, etc.
+    for (const cb of document.querySelectorAll('input[type="checkbox"]:not(:checked)')) {
+      try { if (cb.offsetParent === null) continue; } catch(e) {}
+      const label = (getFieldLabel(cb) || '').toLowerCase();
+      const nearby = (cb.parentElement?.textContent || '').toLowerCase();
+      const allText = label + ' ' + nearby;
+
+      // Auto-check: terms, privacy, SMS consent, acknowledgment
+      if (allText.includes('terms of service') || allText.includes('privacy policy') ||
+          allText.includes('i accept') || allText.includes('i agree') ||
+          allText.includes('i acknowledge') || allText.includes('i certify') ||
+          allText.includes('confirm that the primary phone') || allText.includes('mobile number') ||
+          allText.includes('text messages') || allText.includes('sms') ||
+          allText.includes('consent to') || allText.includes('authorize')) {
+        cb.click();
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+        filled.push('checkbox: ' + allText.slice(0, 50));
+        log('CHECKBOX:', allText.slice(0, 60));
+      }
+    }
 
     // 5. Handle textareas - fill ALL empty visible ones
     for (const ta of document.querySelectorAll('textarea')) {
@@ -762,6 +806,169 @@
       return true;
     }
   });
+
+  // === AUTO-ACCEPT: Click attestation Accept + cookie Accept & Continue on page load ===
+  function autoAcceptOverlays() {
+    const buttons = document.querySelectorAll('button');
+    let clickedCookie = false;
+    let clickedAttestation = false;
+
+    for (const btn of buttons) {
+      const text = btn.textContent.trim().toLowerCase();
+
+      // Cookie banners
+      if (!clickedCookie && (text === 'accept & continue' || text === 'accept and continue' ||
+          text === 'accept all' || text === 'accept cookies')) {
+        btn.click();
+        clickedCookie = true;
+        log('AUTO-ACCEPT: clicked cookie banner:', btn.textContent.trim());
+      }
+
+      // Attestation / terms accept — look for Accept button near a Decline button
+      // This is the most reliable pattern: Accept + Decline = attestation pair
+      if (!clickedAttestation && text === 'accept') {
+        // Check if there's a sibling Decline button nearby
+        const container = btn.closest('div, section, form, [role]') || btn.parentElement;
+        const siblingBtns = container ? container.querySelectorAll('button') : [];
+        let hasDecline = false;
+        for (const sib of siblingBtns) {
+          if (sib.textContent.trim().toLowerCase() === 'decline') {
+            hasDecline = true;
+            break;
+          }
+        }
+
+        // Also check if the page has attestation-like text anywhere nearby
+        const sectionText = (container?.textContent || document.body.innerText.slice(0, 5000)).toLowerCase();
+        const isAttestation = hasDecline || sectionText.includes('certify') ||
+          sectionText.includes('attest') || sectionText.includes('employment application') ||
+          sectionText.includes('talent plus') || sectionText.includes('i agree') ||
+          sectionText.includes('acknowledge');
+
+        if (isAttestation) {
+          btn.click();
+          clickedAttestation = true;
+          log('AUTO-ACCEPT: clicked attestation Accept');
+        }
+      }
+    }
+
+    return { clickedCookie, clickedAttestation };
+  }
+
+  // === AUTO-RUN PIPELINE ===
+  // Full flow: Apply button → Accept overlays → Fill form → Next (once)
+  // Only runs in the top frame, not iframes
+  const isTopFrame = (window === window.top);
+  let autoRunActive = false;
+  let isFilling = false;
+  let hasFilledThisPage = false;
+  let hasClickedNext = false;
+
+  function autoRunPipeline() {
+    if (!isTopFrame) { log('AUTO-RUN: skipping, not top frame'); return; }
+    chrome.storage.local.get(['scipio_autorun'], (data) => {
+      if (!data.scipio_autorun) {
+        log('AUTO-RUN: disabled, running accept-only mode');
+        setTimeout(autoAcceptOverlays, 1000);
+        setTimeout(autoAcceptOverlays, 3000);
+        return;
+      }
+      autoRunActive = true;
+      log('AUTO-RUN: === STARTING PIPELINE ===');
+
+      // Step 1: Accept overlays (1s)
+      setTimeout(() => {
+        autoAcceptOverlays();
+
+        // Step 2: Try clicking Apply button (job listing → application form)
+        setTimeout(() => {
+          if (tryClickApplyButton()) {
+            log('AUTO-RUN: clicked Apply button, page will reload');
+            return; // content script re-injects on new page
+          }
+
+          // Step 3: Fill the form (once)
+          setTimeout(() => {
+            autoFillForm();
+          }, 500);
+        }, 1500);
+      }, 1000);
+    });
+  }
+
+  function tryClickApplyButton() {
+    const keywords = ['apply now', 'apply for this job', 'apply for this position', 'apply to this job'];
+    const buttons = document.querySelectorAll('a, button, input[type="submit"]');
+
+    for (const el of buttons) {
+      const text = (el.textContent || el.value || '').trim().toLowerCase();
+      // Only match exact "apply" or longer phrases — avoid matching random links
+      for (const kw of keywords) {
+        if (text === kw) {
+          try { if (el.offsetParent === null) continue; } catch(e) {}
+          log('AUTO-RUN: found Apply button:', text);
+          el.click();
+          return true;
+        }
+      }
+      // Exact "apply" only if it's a prominent button/link
+      if (text === 'apply' && (el.tagName === 'BUTTON' || el.tagName === 'A')) {
+        try { if (el.offsetParent === null) continue; } catch(e) {}
+        // Make sure it's not the resume upload or some other button
+        const href = el.getAttribute('href') || '';
+        if (href.includes('/apply') || href.includes('/Apply') || el.tagName === 'BUTTON') {
+          log('AUTO-RUN: found Apply button:', text);
+          el.click();
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function autoFillForm() {
+    if (isFilling || hasFilledThisPage) return;
+    isFilling = true;
+
+    chrome.storage.local.get(['profile', 'resume_data'], (data) => {
+      if (!data.profile) {
+        log('AUTO-RUN: no profile saved, skipping');
+        isFilling = false;
+        return;
+      }
+
+      log('AUTO-RUN: filling form...');
+      const result = fillForm(data.profile);
+      log('AUTO-RUN: filled', result.filled.length, 'fields');
+
+      // Attach resume only if stored
+      if (data.resume_data) {
+        try {
+          attachResume(data.resume_data);
+          log('AUTO-RUN: resume attached');
+        } catch(e) {
+          log('AUTO-RUN: resume attach failed:', e.message);
+        }
+      }
+
+      clickCaptchaCheckbox();
+      hasFilledThisPage = true;
+      isFilling = false;
+
+      // Auto-click Next after a delay (once only)
+      if (!hasClickedNext) {
+        hasClickedNext = true;
+        setTimeout(() => {
+          log('AUTO-RUN: clicking Next...');
+          clickNextOrSubmit();
+        }, 1500);
+      }
+    });
+  }
+
+  // Kick off the pipeline
+  autoRunPipeline();
 
   // Show floating indicator that Scipio is active
   function showBadge() {

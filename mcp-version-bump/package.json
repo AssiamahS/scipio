@@ -1,0 +1,8 @@
+{
+  "name": "mcp-version-bump",
+  "version": "1.0.0",
+  "description": "MCP server to bump Chrome extension versions",
+  "type": "module",
+  "main": "index.js",
+  "bin": "index.js"
+}
